@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run *)",
       "Bash(Get-Content \"C:\\\\Users\\\\Mike_\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--worldcup-pool\\\\bffd361a-61c3-4afc-9605-eced8cdd7ced\\\\tasks\\\\betcjrzwe.output\" -Wait)",
-      "Bash(Select-String -Pattern \"ready|error|warn|localhost|compiled\" -SimpleMatch)"
+      "Bash(Select-String -Pattern \"ready|error|warn|localhost|compiled\" -SimpleMatch)",
+      "Bash(npx tsc *)"
     ]
   }
 }
