@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -27,14 +28,22 @@ export default async function AppLayout({
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <span className="font-display text-lg text-text">World Cup Pool</span>
-          <form action={signOut}>
-            <button
-              type="submit"
+          <div className="flex items-center gap-2">
+            <Link
+              href="/pools/create"
               className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
             >
-              Sign out
-            </button>
-          </form>
+              Create pool
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 

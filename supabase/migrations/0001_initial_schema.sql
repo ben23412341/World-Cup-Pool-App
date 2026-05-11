@@ -38,6 +38,7 @@ create table pools (
   id            uuid primary key default gen_random_uuid(),
   owner_id      uuid not null references auth.users(id) on delete restrict,
   name          text not null,
+  description   text,
   join_code     char(6) not null unique default generate_join_code(),
   status        text not null default 'draft'
                   check (status in ('draft', 'open', 'locked', 'completed')),
