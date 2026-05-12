@@ -55,17 +55,14 @@ create index pools_join_code_idx on pools(join_code);
 -- ---------------------------------------------------------------------------
 create table pool_settings (
   pool_id                 uuid primary key references pools(id) on delete cascade,
-  -- tiebreaker question text overrides (optional)
   tiebreaker_1_label      text,
   tiebreaker_2_label      text,
-  -- bonus questions stored as a JSONB array of {id, text, type}
-  -- type: 'text' | 'number' | 'team' | 'yn'
   bonus_questions         jsonb not null default '[]',
   updated_at              timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
--- pool_teams (per-pool team roster + optional cost override)
+-- pool_teams
 -- ---------------------------------------------------------------------------
 create table pool_teams (
   pool_id       uuid not null references pools(id) on delete cascade,
@@ -83,13 +80,11 @@ create table entries (
   user_id                 uuid not null references auth.users(id) on delete restrict,
   display_name            text not null,
   paid                    boolean not null default false,
-  -- tiebreaker answers (integers; null until submitted)
   tiebreaker_total_goals  integer,
   tiebreaker_final_minute integer,
   submitted_at            timestamptz,
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now(),
-  -- one entry per user per pool for v1
   unique (pool_id, user_id)
 );
 
@@ -134,12 +129,10 @@ create table matches (
                             )),
   match_number            integer,
   kickoff_at              timestamptz,
-  -- result (null until played)
   home_score              integer,
   away_score              integer,
   went_to_extra_time      boolean not null default false,
   went_to_penalties       boolean not null default false,
-  -- null unless went_to_penalties = true
   penalty_winner_team_id  uuid references teams(id),
   status                  text not null default 'scheduled'
                             check (status in ('scheduled', 'live', 'finished', 'cancelled')),
@@ -151,16 +144,14 @@ create index matches_pool_id_idx on matches(pool_id);
 create index matches_kickoff_at_idx on matches(kickoff_at);
 
 -- ---------------------------------------------------------------------------
--- match_events  (goals, red cards — used for bonus question resolution)
+-- match_events
 -- ---------------------------------------------------------------------------
 create table match_events (
   id            uuid primary key default gen_random_uuid(),
   match_id      uuid not null references matches(id) on delete cascade,
   team_id       uuid references teams(id),
   event_type    text not null check (event_type in ('goal', 'red_card', 'yellow_red_card')),
-  -- minute as recorded; null for events with unknown time
   minute        integer,
-  -- true for goals scored during the penalty shootout (excluded from tiebreaker count)
   is_penalty_shootout boolean not null default false,
   created_at    timestamptz not null default now()
 );
@@ -211,17 +202,14 @@ create trigger pool_settings_updated_at
 
 -- ---------------------------------------------------------------------------
 -- Atomic entry submission RPC
--- Inserts entry + entry_teams + bonus_answers in one transaction.
--- p_teams:         [{team_id}]
--- p_bonus_answers: [{question_index, answer_text, answer_number}]
 -- ---------------------------------------------------------------------------
 create or replace function submit_entry(
   p_pool_id               uuid,
   p_display_name          text,
   p_tiebreaker_goals      integer,
   p_tiebreaker_minute     integer,
-  p_teams                 jsonb,  -- [{team_id: uuid}]
-  p_bonus_answers         jsonb   -- [{question_index: int, answer_text: text, answer_number: int}]
+  p_teams                 jsonb,
+  p_bonus_answers         jsonb
 )
 returns uuid
 language plpgsql
@@ -234,13 +222,11 @@ declare
   v_team_count integer;
   v_total_cost integer;
 begin
-  -- validate team count
   v_team_count := jsonb_array_length(p_teams);
   if v_team_count < 7 then
     raise exception 'minimum 7 teams required, got %', v_team_count;
   end if;
 
-  -- validate budget (use pool_teams cost_override when present, else teams.cost)
   select coalesce(sum(coalesce(pt.cost_override, t.cost)), 0)
   into v_total_cost
   from jsonb_array_elements(p_teams) as el,
@@ -252,7 +238,6 @@ begin
     raise exception 'budget exceeded: % Pesodollars (max 30)', v_total_cost;
   end if;
 
-  -- insert entry
   insert into entries (
     pool_id, user_id, display_name,
     tiebreaker_total_goals, tiebreaker_final_minute,
@@ -265,14 +250,12 @@ begin
   )
   returning id into v_entry_id;
 
-  -- insert entry_teams
   for v_team in select * from jsonb_array_elements(p_teams)
   loop
     insert into entry_teams (entry_id, team_id)
     values (v_entry_id, (v_team->>'team_id')::uuid);
   end loop;
 
-  -- insert bonus answers
   for v_answer in select * from jsonb_array_elements(p_bonus_answers)
   loop
     insert into entry_bonus_answers (entry_id, question_index, answer_text, answer_number)
@@ -290,8 +273,6 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- Standings recomputation
--- Scoring: win=3, draw=1, loss=0, penalty_loss=1
--- Called by the sports-data ingestion job after each match result is saved.
 -- ---------------------------------------------------------------------------
 create or replace function recompute_pool_standings(p_pool_id uuid)
 returns void
@@ -299,7 +280,6 @@ language plpgsql
 security definer
 as $$
 begin
-  -- delete and reinsert so we can re-rank cleanly
   delete from standings_cache where pool_id = p_pool_id;
 
   insert into standings_cache (pool_id, entry_id, points, rank, computed_at)
@@ -308,9 +288,7 @@ begin
     e.id as entry_id,
     coalesce(sum(
       case
-        -- penalty loss in knockout stage → 1 point
         when m.went_to_penalties and m.penalty_winner_team_id != et.team_id then 1
-        -- match result from the perspective of the selected team
         when m.home_team_id = et.team_id then
           case
             when m.home_score > m.away_score then 3
@@ -367,57 +345,55 @@ alter table matches            enable row level security;
 alter table match_events       enable row level security;
 alter table standings_cache    enable row level security;
 
--- teams: readable by everyone (no auth required — public reference data)
+-- ---------------------------------------------------------------------------
+-- RLS helper functions (avoid recursion in policies)
+-- ---------------------------------------------------------------------------
+create or replace function is_pool_member(p_pool_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (select 1 from entries where pool_id = p_pool_id and user_id = auth.uid());
+$$;
+
+create or replace function is_pool_owner(p_pool_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists (select 1 from pools where id = p_pool_id and owner_id = auth.uid());
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Policies
+-- ---------------------------------------------------------------------------
+
+-- teams: public reference data
 create policy "teams_read_all" on teams for select using (true);
 
--- pools: owner can do anything; members can read their own pool
+-- pools
 create policy "pools_owner_all" on pools
   for all using (owner_id = auth.uid());
 
 create policy "pools_member_read" on pools
-  for select using (
-    exists (
-      select 1 from entries e
-      where e.pool_id = id and e.user_id = auth.uid()
-    )
-  );
+  for select using (is_pool_member(id));
 
--- pool_settings: same as pools
+-- pool_settings
 create policy "pool_settings_owner_all" on pool_settings
-  for all using (
-    exists (select 1 from pools p where p.id = pool_id and p.owner_id = auth.uid())
-  );
+  for all using (is_pool_owner(pool_id));
 
 create policy "pool_settings_member_read" on pool_settings
-  for select using (
-    exists (
-      select 1 from entries e where e.pool_id = pool_id and e.user_id = auth.uid()
-    )
-  );
+  for select using (is_pool_member(pool_id));
 
--- pool_teams: owner can manage; pool members can read
+-- pool_teams
 create policy "pool_teams_owner_all" on pool_teams
-  for all using (
-    exists (select 1 from pools p where p.id = pool_id and p.owner_id = auth.uid())
-  );
+  for all using (is_pool_owner(pool_id));
 
 create policy "pool_teams_member_read" on pool_teams
-  for select using (
-    exists (
-      select 1 from entries e where e.pool_id = pool_id and e.user_id = auth.uid()
-    )
-  );
+  for select using (is_pool_member(pool_id));
 
--- entries: owner of the pool can read all; user can read/write their own
+-- entries
 create policy "entries_own" on entries
   for all using (user_id = auth.uid());
 
 create policy "entries_pool_owner_read" on entries
-  for select using (
-    exists (select 1 from pools p where p.id = pool_id and p.owner_id = auth.uid())
-  );
+  for select using (is_pool_owner(pool_id));
 
--- entry_teams: same rules derived via entry
+-- entry_teams
 create policy "entry_teams_own" on entry_teams
   for all using (
     exists (select 1 from entries e where e.id = entry_id and e.user_id = auth.uid())
@@ -425,14 +401,10 @@ create policy "entry_teams_own" on entry_teams
 
 create policy "entry_teams_pool_owner_read" on entry_teams
   for select using (
-    exists (
-      select 1 from entries e
-      join pools p on p.id = e.pool_id
-      where e.id = entry_id and p.owner_id = auth.uid()
-    )
+    exists (select 1 from entries e where e.id = entry_id and is_pool_owner(e.pool_id))
   );
 
--- entry_bonus_answers: same
+-- entry_bonus_answers
 create policy "entry_bonus_answers_own" on entry_bonus_answers
   for all using (
     exists (select 1 from entries e where e.id = entry_id and e.user_id = auth.uid())
@@ -440,59 +412,34 @@ create policy "entry_bonus_answers_own" on entry_bonus_answers
 
 create policy "entry_bonus_answers_pool_owner_read" on entry_bonus_answers
   for select using (
-    exists (
-      select 1 from entries e
-      join pools p on p.id = e.pool_id
-      where e.id = entry_id and p.owner_id = auth.uid()
-    )
+    exists (select 1 from entries e where e.id = entry_id and is_pool_owner(e.pool_id))
   );
 
--- matches: pool members can read; owner can write
+-- matches
 create policy "matches_member_read" on matches
-  for select using (
-    exists (
-      select 1 from entries e where e.pool_id = pool_id and e.user_id = auth.uid()
-    )
-    or exists (select 1 from pools p where p.id = pool_id and p.owner_id = auth.uid())
-  );
+  for select using (is_pool_member(pool_id) or is_pool_owner(pool_id));
 
 create policy "matches_owner_write" on matches
-  for all using (
-    exists (select 1 from pools p where p.id = pool_id and p.owner_id = auth.uid())
-  );
+  for all using (is_pool_owner(pool_id));
 
--- match_events: readable by pool members/owner
+-- match_events
 create policy "match_events_member_read" on match_events
   for select using (
-    exists (
-      select 1 from matches m
-      join entries e on e.pool_id = m.pool_id
-      where m.id = match_id and e.user_id = auth.uid()
-    )
-    or exists (
-      select 1 from matches m
-      join pools p on p.id = m.pool_id
-      where m.id = match_id and p.owner_id = auth.uid()
-    )
+    exists (select 1 from matches m where m.id = match_id and (is_pool_member(m.pool_id) or is_pool_owner(m.pool_id)))
   );
 
 create policy "match_events_owner_write" on match_events
   for all using (
-    exists (
-      select 1 from matches m
-      join pools p on p.id = m.pool_id
-      where m.id = match_id and p.owner_id = auth.uid()
-    )
+    exists (select 1 from matches m where m.id = match_id and is_pool_owner(m.pool_id))
   );
 
--- standings_cache: readable by pool members and owner
+-- standings_cache
 create policy "standings_cache_member_read" on standings_cache
-  for select using (
-    exists (
-      select 1 from entries e where e.pool_id = pool_id and e.user_id = auth.uid()
-    )
-    or exists (select 1 from pools p where p.id = pool_id and p.owner_id = auth.uid())
-  );
+  for select using (is_pool_member(pool_id) or is_pool_owner(pool_id));
+
+-- ---------------------------------------------------------------------------
+-- Seed: teams
+-- ---------------------------------------------------------------------------
 insert into teams (name, code, cost) values
   ('France', 'FRA', 7),
   ('Spain', 'ESP', 7),

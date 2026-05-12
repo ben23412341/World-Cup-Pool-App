@@ -1,20 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-
-const createPoolSchema = z.object({
-  name: z.string().min(3, "Pool name must be at least 3 characters"),
-  description: z.string().optional(),
-  locks_at: z.string().refine(
-    (val) => {
-      const d = new Date(val);
-      return !isNaN(d.getTime()) && d > new Date();
-    },
-    { message: "Entry deadline must be a future date" }
-  ),
-});
+import { createPoolSchema } from "@/lib/schemas/pool";
 
 const BONUS_QUESTIONS = [
   { id: 1, text: "Which team will win the World Cup?", type: "team" },
