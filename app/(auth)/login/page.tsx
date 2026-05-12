@@ -1,39 +1,48 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { loginSchema } from "@/lib/schemas/auth";
 
 export const metadata = { title: "Sign in — World Cup Pool" };
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; error?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { sent, error } = await searchParams;
+  const { error } = await searchParams;
 
   async function signIn(formData: FormData) {
     "use server";
     const email = (formData.get("email") as string).trim();
-    const headersList = await headers();
-    const host = headersList.get("host") ?? "localhost:3000";
-    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-    const origin = `${protocol}://${host}`;
+    const password = formData.get("password") as string;
+
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      redirect(
+        `/login?error=${encodeURIComponent(result.error.issues[0].message)}`
+      );
+    }
 
     const supabase = await createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${origin}/auth/callback` },
+    const { error } = await supabase.auth.signInWithPassword({
+      email: result.data.email,
+      password: result.data.password,
     });
 
     if (error) {
-      redirect("/login?error=1");
+      redirect(`/login?error=${encodeURIComponent(error.message)}`);
     }
-    redirect("/login?sent=1");
+    redirect("/my-entries");
   }
+
+  const inputClass =
+    "rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const labelClass =
+    "text-xs font-medium uppercase tracking-wide text-text-subtle";
 
   return (
     <div>
-      {/* Logo / wordmark */}
       <div className="mb-8 text-center">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -50,57 +59,66 @@ export default async function LoginPage({
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-8">
-        {sent ? (
-          <div className="text-center">
-            <p className="mb-2 text-lg font-semibold text-text">
-              Check your email
-            </p>
-            <p className="text-sm text-text-muted">
-              We sent you a magic link. Click it to sign in — it expires in
-              1&nbsp;hour.
-            </p>
-          </div>
-        ) : (
-          <>
-            <h2 className="mb-1 text-base font-semibold text-text">Sign in</h2>
-            <p className="mb-6 text-sm text-text-muted">
-              Enter your email and we&apos;ll send a magic link.
-            </p>
+        <h2 className="mb-6 text-base font-semibold text-text">Sign in</h2>
 
-            {error && (
-              <p className="mb-4 rounded-lg bg-loss/10 px-4 py-3 text-sm text-loss">
-                Something went wrong. Please try again.
-              </p>
-            )}
-
-            <form action={signIn} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="email"
-                  className="text-xs font-medium uppercase tracking-wide text-text-subtle"
-                >
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  className="rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="mt-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-bright focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                Send magic link
-              </button>
-            </form>
-          </>
+        {error && (
+          <p className="mb-4 rounded-lg bg-loss/10 px-4 py-3 text-sm text-loss">
+            {error}
+          </p>
         )}
+
+        <form action={signIn} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="email" className={labelClass}>
+              Email address
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="password" className={labelClass}>
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              className={inputClass}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="mt-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-bright focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            Sign in
+          </button>
+        </form>
+
+        <div className="mt-6 flex flex-col items-center gap-3 text-sm">
+          <Link
+            href="/signup"
+            className="text-text-muted transition-colors hover:text-text"
+          >
+            Create account
+          </Link>
+          <Link
+            href="/forgot-password"
+            className="text-text-muted transition-colors hover:text-text"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
     </div>
   );
