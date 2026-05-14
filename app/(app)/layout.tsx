@@ -30,6 +30,12 @@ export default async function AppLayout({
           <span className="font-display text-lg text-text">World Cup Pool</span>
           <div className="flex items-center gap-2">
             <Link
+              href="/my-entries"
+              className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
+            >
+              My entries
+            </Link>
+            <Link
               href="/join"
               className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
             >
