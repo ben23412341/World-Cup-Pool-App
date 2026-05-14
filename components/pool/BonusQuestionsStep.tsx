@@ -1,22 +1,41 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PoolTeam, BonusQuestion } from "@/app/(app)/pools/[code]/entries/new/page";
 import { submitEntry } from "@/app/(app)/pools/[code]/entries/new/actions";
 
 type Answers = Record<number, string | number | "">;
 
+type SubmitPayload = {
+  selectedTeamIds: string[];
+  tiebreakerGoals: number;
+  tiebreakerMinute: number;
+  bonusAnswers: { question_index: number; answer_text: string | null; answer_number: number | null }[];
+};
+
 export function BonusQuestionsStep({
   questions,
   teams,
   poolCode,
+  storageKey: storageKeyProp,
+  teamPickerStorageKey: teamPickerStorageKeyProp,
+  initialValues,
+  onSubmit: onSubmitProp,
+  submitLabel = "Submit entry",
 }: {
   questions: BonusQuestion[];
   teams: PoolTeam[];
   poolCode: string;
+  storageKey?: string;
+  teamPickerStorageKey?: string;
+  initialValues?: Answers;
+  onSubmit?: (payload: SubmitPayload) => Promise<{ error: string } | { success: true; entryId: string }>;
+  submitLabel?: string;
 }) {
-  const storageKey = `bonus-draft-${poolCode}`;
+  const storageKey = storageKeyProp ?? `bonus-draft-${poolCode}`;
+  const teamPickerStorageKey = teamPickerStorageKeyProp ?? `entry-draft-${poolCode}`;
+  const initialValuesRef = useRef(initialValues);
   const router = useRouter();
 
   const [answers, setAnswers] = useState<Answers>({});
@@ -32,9 +51,13 @@ export function BonusQuestionsStep({
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           setAnswers(parsed);
         }
+      } else if (initialValuesRef.current) {
+        setAnswers(initialValuesRef.current);
       }
     } catch {
-      // ignore corrupt drafts
+      if (initialValuesRef.current) {
+        setAnswers(initialValuesRef.current);
+      }
     }
     setHydrated(true);
   }, [storageKey]);
@@ -61,7 +84,7 @@ export function BonusQuestionsStep({
       let tiebreakerGoals = 0;
       let tiebreakerMinute = 0;
       try {
-        const raw = sessionStorage.getItem(`entry-draft-${poolCode}`);
+        const raw = sessionStorage.getItem(teamPickerStorageKey);
         if (raw) {
           const draft = JSON.parse(raw) as {
             selectedTeamIds: string[];
@@ -88,12 +111,10 @@ export function BonusQuestionsStep({
           answer_number: q.type === "number" ? Number(answers[q.id]) : null,
         }));
 
-      const result = await submitEntry(poolCode, {
-        selectedTeamIds,
-        tiebreakerGoals,
-        tiebreakerMinute,
-        bonusAnswers,
-      });
+      const payload = { selectedTeamIds, tiebreakerGoals, tiebreakerMinute, bonusAnswers };
+      const result = onSubmitProp
+        ? await onSubmitProp(payload)
+        : await submitEntry(poolCode, payload);
 
       if ("error" in result) {
         setSubmitError(result.error);
@@ -102,7 +123,7 @@ export function BonusQuestionsStep({
 
       // Clear both drafts before navigating
       try {
-        sessionStorage.removeItem(`entry-draft-${poolCode}`);
+        sessionStorage.removeItem(teamPickerStorageKey);
         sessionStorage.removeItem(storageKey);
       } catch {
         // ignore
@@ -186,7 +207,7 @@ export function BonusQuestionsStep({
               : "cursor-pointer bg-primary text-white hover:bg-primary-bright")
           }
         >
-          {isPending ? "Submitting..." : "Submit entry"}
+          {isPending ? "Saving..." : submitLabel}
         </button>
         {submitError ? (
           <span className="text-xs text-loss">{submitError}</span>

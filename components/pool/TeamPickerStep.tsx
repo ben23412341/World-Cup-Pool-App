@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PoolTeam } from "@/app/(app)/pools/[code]/entries/new/page";
 
 const BUDGET = 30;
@@ -12,21 +12,33 @@ type Draft = {
   tiebreakerMinute: number | "";
 };
 
+type InitialValues = {
+  selectedTeamIds: string[];
+  tiebreakerGoals: number | "";
+  tiebreakerMinute: number | "";
+};
+
 export function TeamPickerStep({
   teams,
   poolCode,
+  storageKey: storageKeyProp,
+  initialValues,
 }: {
   teams: PoolTeam[];
   poolCode: string;
+  storageKey?: string;
+  initialValues?: InitialValues;
 }) {
-  const storageKey = `entry-draft-${poolCode}`;
+  const storageKey = storageKeyProp ?? `entry-draft-${poolCode}`;
+  // Capture on first render only — used as fallback when sessionStorage is empty
+  const initialValuesRef = useRef(initialValues);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [tiebreakerGoals, setTiebreakerGoals] = useState<number | "">("");
   const [tiebreakerMinute, setTiebreakerMinute] = useState<number | "">("");
   const [hydrated, setHydrated] = useState(false);
 
-  // Load from sessionStorage on mount
+  // Load from sessionStorage on mount; fall back to initialValues when empty
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(storageKey);
@@ -41,9 +53,19 @@ export function TeamPickerStep({
         if (typeof draft.tiebreakerMinute === "number" || draft.tiebreakerMinute === "") {
           setTiebreakerMinute(draft.tiebreakerMinute);
         }
+      } else if (initialValuesRef.current) {
+        const iv = initialValuesRef.current;
+        setSelected(new Set(iv.selectedTeamIds));
+        setTiebreakerGoals(iv.tiebreakerGoals);
+        setTiebreakerMinute(iv.tiebreakerMinute);
       }
     } catch {
-      // ignore corrupt drafts
+      if (initialValuesRef.current) {
+        const iv = initialValuesRef.current;
+        setSelected(new Set(iv.selectedTeamIds));
+        setTiebreakerGoals(iv.tiebreakerGoals);
+        setTiebreakerMinute(iv.tiebreakerMinute);
+      }
     }
     setHydrated(true);
   }, [storageKey]);

@@ -10,10 +10,13 @@ type BonusQuestion = {
 
 export default async function EntryDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string; id: string }>;
+  searchParams: Promise<{ locked?: string }>;
 }) {
   const { code, id } = await params;
+  const { locked } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -22,7 +25,7 @@ export default async function EntryDetailPage({
 
   const { data: pool } = await supabase
     .from("pools")
-    .select("id, name, join_code, owner_id, status")
+    .select("id, name, join_code, owner_id, status, locks_at")
     .eq("join_code", code.toUpperCase())
     .single();
 
@@ -41,8 +44,11 @@ export default async function EntryDetailPage({
 
   const isEntryOwner = user?.id === entry.user_id;
   const isPoolOwner = user?.id === pool.owner_id;
-  const poolUnlocked = pool.status === "locked" || pool.status === "completed";
-  const canView = isEntryOwner || isPoolOwner || poolUnlocked;
+  const poolLocked =
+    pool.status === "locked" ||
+    pool.status === "completed" ||
+    (pool.locks_at != null && new Date(pool.locks_at) <= new Date());
+  const canView = isEntryOwner || isPoolOwner || poolLocked;
 
   if (!canView) {
     return (
@@ -131,6 +137,12 @@ export default async function EntryDetailPage({
           </Link>
         </p>
       </div>
+
+      {locked === "1" && (
+        <div className="mt-6 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-muted">
+          Editing is closed — this pool is locked.
+        </div>
+      )}
 
       <section className="mt-10">
         <h2 className="font-display text-xl text-text">Team picks</h2>
@@ -221,13 +233,21 @@ export default async function EntryDetailPage({
         )}
       </section>
 
-      <div className="mt-12 border-t border-border pt-6">
+      <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
         <Link
           href={`/pools/${pool.join_code}`}
           className="text-sm text-primary hover:text-primary-bright"
         >
           ← Back to {pool.name}
         </Link>
+        {isEntryOwner && !poolLocked && (
+          <Link
+            href={`/pools/${pool.join_code}/entries/${entry.id}/edit`}
+            className="rounded-md border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
+          >
+            Edit entry
+          </Link>
+        )}
       </div>
     </div>
   );
