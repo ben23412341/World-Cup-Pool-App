@@ -3,12 +3,19 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TeamPickerStep } from "@/components/pool/TeamPickerStep";
+import { BonusQuestionsStep } from "@/components/pool/BonusQuestionsStep";
 
 export type PoolTeam = {
   id: string;
   name: string;
   code: string;
   cost: number;
+};
+
+export type BonusQuestion = {
+  id: number;
+  text: string;
+  type: "team" | "text" | "number";
 };
 
 type Step = 1 | 2 | 3;
@@ -68,6 +75,16 @@ export default async function NewEntryPage({
     })
     .sort((a, b) => b.cost - a.cost || a.name.localeCompare(b.name));
 
+  const { data: settingsRow } = await supabase
+    .from("pool_settings")
+    .select("bonus_questions")
+    .eq("pool_id", pool.id)
+    .maybeSingle();
+
+  const bonusQuestions: BonusQuestion[] = Array.isArray(settingsRow?.bonus_questions)
+    ? (settingsRow.bonus_questions as BonusQuestion[])
+    : [];
+
   const base = `/pools/${pool.join_code}/entries/new`;
 
   return (
@@ -77,7 +94,13 @@ export default async function NewEntryPage({
       <div className="mt-8">
         {step === 1 && <StepRules />}
         {step === 2 && <TeamPickerStep teams={poolTeams} poolCode={pool.join_code} />}
-        {step === 3 && <StepBonusPlaceholder />}
+        {step === 3 && (
+          <BonusQuestionsStep
+            questions={bonusQuestions}
+            teams={poolTeams}
+            poolCode={pool.join_code}
+          />
+        )}
       </div>
 
       <div className="mt-10 flex items-center justify-between border-t border-border pt-6">
@@ -99,16 +122,6 @@ export default async function NewEntryPage({
           >
             Continue
           </Link>
-        ) : step === 3 ? (
-          <div className="flex flex-col items-end gap-1">
-            <button
-              disabled
-              className="cursor-not-allowed rounded-md bg-surface px-5 py-2 text-sm font-medium text-text-subtle ring-1 ring-border"
-            >
-              Submit entry
-            </button>
-            <span className="text-xs text-text-subtle">Coming soon</span>
-          </div>
         ) : (
           <div />
         )}
@@ -243,10 +256,3 @@ function StepRules() {
   );
 }
 
-function StepBonusPlaceholder() {
-  return (
-    <div className="rounded-lg border border-border bg-surface p-10 text-center text-sm text-text-subtle">
-      Coming next
-    </div>
-  );
-}
