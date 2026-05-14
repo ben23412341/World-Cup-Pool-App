@@ -76,7 +76,7 @@ export default async function NewEntryPage({
 
       <div className="mt-8">
         {step === 1 && <StepRules />}
-        {step === 2 && <TeamPickerStep teams={poolTeams} />}
+        {step === 2 && <TeamPickerStep teams={poolTeams} poolCode={pool.join_code} />}
         {step === 3 && <StepBonusPlaceholder />}
       </div>
 
@@ -92,14 +92,14 @@ export default async function NewEntryPage({
           <div />
         )}
 
-        {step < 3 ? (
+        {step === 1 ? (
           <Link
-            href={`${base}?step=${step + 1}`}
+            href={`${base}?step=2`}
             className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-bright"
           >
             Continue
           </Link>
-        ) : (
+        ) : step === 3 ? (
           <div className="flex flex-col items-end gap-1">
             <button
               disabled
@@ -109,6 +109,8 @@ export default async function NewEntryPage({
             </button>
             <span className="text-xs text-text-subtle">Coming soon</span>
           </div>
+        ) : (
+          <div />
         )}
       </div>
     </div>
@@ -237,14 +239,6 @@ function StepRules() {
       <p className="text-sm text-text-muted">
         When you continue, you&apos;ll pick your team.
       </p>
-    </div>
-  );
-}
-
-function StepTeamPlaceholder() {
-  return (
-    <div className="rounded-lg border border-border bg-surface p-10 text-center text-sm text-text-subtle">
-      Coming next
     </div>
   );
 }

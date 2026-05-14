@@ -1,15 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { PoolTeam } from "@/app/(app)/pools/[code]/entries/new/page";
 
 const BUDGET = 30;
 const MIN_TEAMS = 7;
 
-export function TeamPickerStep({ teams }: { teams: PoolTeam[] }) {
+type Draft = {
+  selectedTeamIds: string[];
+  tiebreakerGoals: number | "";
+  tiebreakerMinute: number | "";
+};
+
+export function TeamPickerStep({
+  teams,
+  poolCode,
+}: {
+  teams: PoolTeam[];
+  poolCode: string;
+}) {
+  const storageKey = `entry-draft-${poolCode}`;
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [tiebreakerGoals, setTiebreakerGoals] = useState<number | "">("");
   const [tiebreakerMinute, setTiebreakerMinute] = useState<number | "">("");
+  const [hydrated, setHydrated] = useState(false);
+
+  // Load from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) {
+        const draft = JSON.parse(raw) as Draft;
+        if (Array.isArray(draft.selectedTeamIds)) {
+          setSelected(new Set(draft.selectedTeamIds));
+        }
+        if (typeof draft.tiebreakerGoals === "number" || draft.tiebreakerGoals === "") {
+          setTiebreakerGoals(draft.tiebreakerGoals);
+        }
+        if (typeof draft.tiebreakerMinute === "number" || draft.tiebreakerMinute === "") {
+          setTiebreakerMinute(draft.tiebreakerMinute);
+        }
+      }
+    } catch {
+      // ignore corrupt drafts
+    }
+    setHydrated(true);
+  }, [storageKey]);
+
+  // Save to sessionStorage whenever state changes (after initial hydration)
+  useEffect(() => {
+    if (!hydrated) return;
+    const draft: Draft = {
+      selectedTeamIds: Array.from(selected),
+      tiebreakerGoals,
+      tiebreakerMinute,
+    };
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(draft));
+    } catch {
+      // ignore quota errors
+    }
+  }, [selected, tiebreakerGoals, tiebreakerMinute, hydrated, storageKey]);
 
   const tiers = Array.from(new Set(teams.map((t) => t.cost))).sort(
     (a, b) => b - a
@@ -50,13 +102,7 @@ export function TeamPickerStep({ teams }: { teams: PoolTeam[] }) {
 
   function handleContinue() {
     if (!isValid) return;
-    console.log(
-      JSON.stringify({
-        selectedTeamIds: Array.from(selected),
-        tiebreakerGoals: tiebreakerGoals as number,
-        tiebreakerMinute: tiebreakerMinute as number,
-      })
-    );
+    window.location.search = "?step=3";
   }
 
   const validationMsg =
@@ -178,7 +224,6 @@ export function TeamPickerStep({ teams }: { teams: PoolTeam[] }) {
       {/* Sticky summary bar */}
       <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-surface px-4 py-3">
         <div className="flex items-center gap-4">
-          {/* Budget meter */}
           <div className="shrink-0">
             <p className="text-sm tabular-nums">
               <span className={`text-lg font-bold ${costColor}`}>
@@ -194,11 +239,27 @@ export function TeamPickerStep({ teams }: { teams: PoolTeam[] }) {
             </div>
           </div>
 
-          {/* Validation status */}
           <div className="flex-1 text-center text-sm font-medium">
             {validationMsg}
           </div>
         </div>
+      </div>
+
+      {/* Continue button (validated) */}
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={!isValid}
+          className={
+            "rounded-md px-5 py-2 text-sm font-medium transition-colors " +
+            (isValid
+              ? "bg-primary text-white hover:bg-primary-bright cursor-pointer"
+              : "bg-surface text-text-subtle ring-1 ring-border cursor-not-allowed")
+          }
+        >
+          Continue
+        </button>
       </div>
     </div>
   );

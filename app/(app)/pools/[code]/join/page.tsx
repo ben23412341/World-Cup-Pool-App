@@ -28,10 +28,18 @@ export default async function JoinPoolPage({
 
   const { data: existingEntry } = await supabase
     .from("entries")
-    .select("id")
+    .select("id, submitted_at")
     .eq("pool_id", pool.id)
     .eq("user_id", user!.id)
     .maybeSingle();
+
+  if (existingEntry) {
+    if (existingEntry.submitted_at) {
+      redirect(`/pools/${pool.join_code}/entries/${existingEntry.id}`);
+    } else {
+      redirect(`/pools/${pool.join_code}/entries/new`);
+    }
+  }
 
   if (existingEntry) {
     redirect(`/pools/${pool.join_code}/entries/${existingEntry.id}`);
