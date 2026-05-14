@@ -37,6 +37,15 @@ export default async function PoolDashboardPage({
   const myEntry = allEntries.find((e) => e.user_id === user?.id) ?? null;
   const submittedCount = allEntries.filter((e) => e.submitted_at).length;
 
+  const { data: standingsPreviewData } = await supabase
+    .from("standings_cache")
+    .select("entry_id, points, rank, entries(display_name)")
+    .eq("pool_id", pool.id)
+    .order("rank", { ascending: true })
+    .limit(5);
+
+  const topStandings = standingsPreviewData ?? [];
+
   return (
     <div className="mx-auto max-w-3xl">
       {/* Header */}
@@ -174,15 +183,59 @@ export default async function PoolDashboardPage({
 
       {/* Leaderboard preview */}
       <section className="mt-8">
-        <h2 className="font-display text-xl text-text">Leaderboard preview</h2>
-        <p className="mt-4 text-sm text-text-muted">
-          The leaderboard will appear here once the tournament starts.
-        </p>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-xl text-text">Leaderboard preview</h2>
+          {topStandings.length > 0 && (
+            <Link
+              href={`/pools/${pool.join_code}/leaderboard`}
+              className="text-sm text-text-muted hover:text-text"
+            >
+              View all →
+            </Link>
+          )}
+        </div>
+
+        {topStandings.length === 0 ? (
+          <p className="mt-4 text-sm text-text-muted">
+            The leaderboard will appear here once the tournament starts.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface divide-y divide-border">
+            {topStandings.map((row) => {
+              const entry = row.entries as unknown as { display_name: string } | null;
+              const isFirst = row.rank === 1;
+              return (
+                <div key={row.entry_id} className="flex items-center gap-4 px-4 py-2.5">
+                  <span
+                    className={
+                      "w-6 flex-shrink-0 text-right font-mono text-sm tabular-nums " +
+                      (isFirst ? "text-accent" : "text-text-muted")
+                    }
+                  >
+                    {row.rank}
+                  </span>
+                  <span className="flex-1 text-sm text-text">
+                    {entry?.display_name ?? "—"}
+                  </span>
+                  <span className="font-mono text-sm tabular-nums text-text-muted">
+                    {row.points} pts
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      {/* Pool settings (owner only) */}
+      {/* Owner links */}
       {isOwner && (
-        <div className="mt-10 border-t border-border pt-6">
+        <div className="mt-10 flex gap-6 border-t border-border pt-6">
+          <Link
+            href={`/pools/${pool.join_code}/matches/admin`}
+            className="text-sm text-text-muted transition-colors hover:text-text"
+          >
+            Manage matches →
+          </Link>
           <Link
             href={`/pools/${pool.join_code}/settings`}
             className="text-sm text-text-muted transition-colors hover:text-text"
