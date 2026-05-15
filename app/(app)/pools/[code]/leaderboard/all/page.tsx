@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { LeaderboardRow } from "./LeaderboardRow";
+import { LeaderboardRow } from "../LeaderboardRow";
 
-export default async function LeaderboardPage({
+export default async function LeaderboardAllPage({
   params,
 }: {
   params: Promise<{ code: string }>;
@@ -27,31 +26,7 @@ export default async function LeaderboardPage({
   if (!pool) notFound();
 
   const poolLocked = pool.status === "locked" || pool.status === "completed";
-
-  if (!poolLocked) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <div>
-          <Link
-            href={`/pools/${pool.join_code}`}
-            className="text-sm text-text-muted hover:text-text"
-          >
-            ← {pool.name}
-          </Link>
-          <h1 className="font-display mt-1 text-3xl text-text">Leaderboard</h1>
-        </div>
-        <div className="mt-8">
-          <EmptyState
-            title="No standings yet"
-            description="The leaderboard will appear here once the tournament starts."
-            actions={[
-              { label: "Back to dashboard", href: `/pools/${pool.join_code}`, variant: "ghost" },
-            ]}
-          />
-        </div>
-      </div>
-    );
-  }
+  if (!poolLocked) redirect(`/pools/${pool.join_code}/leaderboard`);
 
   const [{ data: entriesData }, { data: cacheData }] = await Promise.all([
     supabase
@@ -99,58 +74,31 @@ export default async function LeaderboardPage({
   const actualTotalGoals = pool.actual_total_goals as number | null;
   const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
 
-  const visibleRows = allRows.slice(0, 10);
-  const hasMore = allRows.length > 10;
-
   return (
     <div className="mx-auto max-w-3xl">
       <div>
         <Link
-          href={`/pools/${pool.join_code}`}
+          href={`/pools/${pool.join_code}/leaderboard`}
           className="text-sm text-text-muted hover:text-text"
         >
-          ← {pool.name}
+          ← Back to leaderboard
         </Link>
-        <h1 className="font-display mt-1 text-3xl text-text">Leaderboard</h1>
+        <h1 className="font-display mt-1 text-3xl text-text">All entries</h1>
+        <p className="mt-1 text-sm text-text-muted">{allRows.length} entries</p>
       </div>
 
-      <div className="mt-8">
-        {allRows.length === 0 ? (
-          <EmptyState
-            title="Waiting for the first match results"
-            description="Standings update automatically after each match is scored."
-            actions={[
-              { label: "Back to dashboard", href: `/pools/${pool.join_code}`, variant: "ghost" },
-            ]}
+      <div className="mt-8 space-y-2">
+        {allRows.map((row) => (
+          <LeaderboardRow
+            key={row.entryId}
+            {...row}
+            poolCode={pool.join_code}
+            poolUnlocked={poolLocked}
+            isTied={isTied(row.points)}
+            actualTotalGoals={actualTotalGoals}
+            actualFinalMinute={actualFinalMinute}
           />
-        ) : (
-          <>
-            <div className="space-y-2">
-              {visibleRows.map((row) => (
-                <LeaderboardRow
-                  key={row.entryId}
-                  {...row}
-                  poolCode={pool.join_code}
-                  poolUnlocked={poolLocked}
-                  isTied={isTied(row.points)}
-                  actualTotalGoals={actualTotalGoals}
-                  actualFinalMinute={actualFinalMinute}
-                />
-              ))}
-            </div>
-
-            {hasMore && (
-              <div className="mt-4 text-center">
-                <Link
-                  href={`/pools/${pool.join_code}/leaderboard/all`}
-                  className="text-sm text-text-muted hover:text-text"
-                >
-                  View all {allRows.length} entries →
-                </Link>
-              </div>
-            )}
-          </>
-        )}
+        ))}
       </div>
     </div>
   );

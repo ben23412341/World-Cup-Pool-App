@@ -304,12 +304,18 @@ export default async function PoolDashboardPage({
 
       {/* Owner links */}
       {isOwner && (
-        <div className="mt-10 flex gap-6 border-t border-border pt-6">
+        <div className="mt-10 flex flex-wrap gap-6 border-t border-border pt-6">
           <Link
             href={`/pools/${pool.join_code}/matches/admin`}
             className="text-sm text-text-muted transition-colors hover:text-text"
           >
             Manage matches →
+          </Link>
+          <Link
+            href={`/pools/${pool.join_code}/tiebreakers/admin`}
+            className="text-sm text-text-muted transition-colors hover:text-text"
+          >
+            Manage tiebreakers →
           </Link>
           <Link
             href={`/pools/${pool.join_code}/settings`}
