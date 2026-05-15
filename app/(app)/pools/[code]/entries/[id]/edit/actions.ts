@@ -43,14 +43,13 @@ export async function updateEntry(
 
   if (!pool) return { error: "Pool not found." };
 
-  // Lock check — same condition enforced on page load and here
-  const isLocked =
-    pool.status === "locked" ||
-    pool.status === "completed" ||
-    (pool.locks_at != null && new Date(pool.locks_at) <= new Date());
+  // Pool must be 'open' and before its deadline to allow edits
+  const canEdit =
+    pool.status === "open" &&
+    !(pool.locks_at != null && new Date(pool.locks_at) <= new Date());
 
-  if (isLocked) {
-    return { error: "This pool is locked. Editing is no longer allowed." };
+  if (!canEdit) {
+    return { error: "This pool is not accepting entries." };
   }
 
   // Ownership check — only the entry owner may update

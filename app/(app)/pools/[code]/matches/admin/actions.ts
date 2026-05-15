@@ -33,6 +33,11 @@ export async function saveMatchResult(
     return { error: 'Scores must be non-negative integers' }
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
   const { data: match } = await supabase
     .from('matches')
     .select('stage, pool_id')
@@ -40,6 +45,18 @@ export async function saveMatchResult(
     .single()
 
   if (!match) return { error: 'Match not found' }
+
+  const { data: pool } = await supabase
+    .from('pools')
+    .select('status, owner_id')
+    .eq('id', match.pool_id)
+    .single()
+
+  if (!pool) return { error: 'Pool not found' }
+  if (pool.owner_id !== user.id) return { error: 'Not authorized' }
+  if (pool.status !== 'locked' && pool.status !== 'completed') {
+    return { error: 'Match results can only be entered after the pool is locked.' }
+  }
 
   if (match.stage === 'group' && payload.went_to_penalties) {
     return { error: 'Group stage matches cannot go to penalties' }

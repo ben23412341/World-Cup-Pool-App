@@ -28,10 +28,15 @@ export async function submitEntry(
 
   const { data: pool } = await supabase
     .from("pools")
-    .select("id, join_code")
+    .select("id, join_code, status, locks_at")
     .eq("join_code", poolCode.toUpperCase())
     .maybeSingle();
   if (!pool) return { error: "Pool not found." };
+
+  const acceptingEntries =
+    pool.status === "open" &&
+    !(pool.locks_at != null && new Date(pool.locks_at) <= new Date());
+  if (!acceptingEntries) return { error: "This pool is not accepting entries." };
 
   const { data: entry } = await supabase
     .from("entries")

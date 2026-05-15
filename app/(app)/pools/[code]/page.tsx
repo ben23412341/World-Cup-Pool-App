@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { maybeAutoLock } from "@/lib/pools/auto-lock";
 import { CopyButton } from "@/components/pool/CopyButton";
+import { PoolStatusControls } from "./PoolStatusControls";
+
+const STATUS_BADGE: Record<string, string> = {
+  draft: "bg-surface-elevated text-text-muted",
+  open: "bg-primary/15 text-primary",
+  locked: "bg-accent/15 text-accent",
+  completed: "bg-surface-elevated text-text-subtle",
+};
 
 export default async function PoolDashboardPage({
   params,
@@ -15,16 +24,34 @@ export default async function PoolDashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: pool } = await supabase
+  const { data: rawPool } = await supabase
     .from("pools")
-    .select("id, name, description, join_code, owner_id, status, locks_at")
+    .select("id, name, description, join_code, owner_id, status, locks_at, status_changed_at, previous_status")
     .eq("join_code", code.toUpperCase())
     .single();
 
-  if (!pool) notFound();
+  if (!rawPool) notFound();
+
+  const pool = await maybeAutoLock(supabase, rawPool);
 
   const isOwner = user?.id === pool.owner_id;
   const poolUnlocked = pool.status === "locked" || pool.status === "completed";
+  const showJoinCode = pool.status === "draft" || pool.status === "open";
+
+  // Non-owner on a draft pool — they can't have joined, show a holding message
+  if (!isOwner && pool.status === "draft") {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <h1 className="font-display text-3xl text-text">{pool.name}</h1>
+        <div className="mt-8 rounded-lg border border-border bg-surface px-6 py-10 text-center">
+          <p className="text-text-muted">This pool isn't open yet.</p>
+          <p className="mt-2 text-sm text-text-subtle">
+            Check back once the organizer opens entries.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // RLS: owner sees all entries; member sees only their own
   const { data: entriesData } = await supabase
@@ -64,16 +91,38 @@ export default async function PoolDashboardPage({
         </Link>
       </div>
 
-      {/* Join code card */}
+      {/* Join code / status card */}
       <div className="mt-6 rounded-lg border border-border bg-surface p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs text-text-muted">Join code</p>
-            <p className="mt-1 font-mono text-3xl tracking-[0.25em] text-primary">
-              {pool.join_code}
-            </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              {showJoinCode && (
+                <p className="text-xs text-text-muted">Join code</p>
+              )}
+              <span
+                className={
+                  "rounded-full px-2.5 py-0.5 text-xs font-medium capitalize " +
+                  (STATUS_BADGE[pool.status] ?? STATUS_BADGE.draft)
+                }
+              >
+                {pool.status}
+              </span>
+            </div>
+
+            {showJoinCode ? (
+              <p className="mt-1 font-mono text-3xl tracking-[0.25em] text-primary">
+                {pool.join_code}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-text-subtle">
+                {pool.status === "locked"
+                  ? "Pool is locked — no new entries."
+                  : "Pool is complete — final standings are frozen."}
+              </p>
+            )}
           </div>
-          <CopyButton text={pool.join_code} />
+
+          {showJoinCode && <CopyButton text={pool.join_code} />}
         </div>
 
         {isOwner && (
@@ -113,7 +162,7 @@ export default async function PoolDashboardPage({
           </p>
         )}
 
-        {!isOwner && !myEntry && (
+        {!isOwner && !myEntry && pool.status === "open" && (
           <p className="mt-3 border-t border-border pt-3 text-sm">
             <Link
               href={`/pools/${pool.join_code}/join`}
@@ -122,6 +171,15 @@ export default async function PoolDashboardPage({
               Join this pool →
             </Link>
           </p>
+        )}
+
+        {isOwner && (
+          <PoolStatusControls
+            poolCode={pool.join_code}
+            status={pool.status}
+            statusChangedAt={pool.status_changed_at ?? null}
+            previousStatus={pool.previous_status ?? null}
+          />
         )}
       </div>
 

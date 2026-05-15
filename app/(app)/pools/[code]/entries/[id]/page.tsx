@@ -44,10 +44,9 @@ export default async function EntryDetailPage({
 
   const isEntryOwner = user?.id === entry.user_id;
   const isPoolOwner = user?.id === pool.owner_id;
-  const poolLocked =
-    pool.status === "locked" ||
-    pool.status === "completed" ||
-    (pool.locks_at != null && new Date(pool.locks_at) <= new Date());
+  // Visibility unlocks when the pool status is locked/completed, not merely when
+  // locks_at has passed — auto-lock will have updated the status by render time.
+  const poolLocked = pool.status === "locked" || pool.status === "completed";
   const canView = isEntryOwner || isPoolOwner || poolLocked;
 
   if (!canView) {

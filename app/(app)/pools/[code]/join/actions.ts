@@ -44,8 +44,9 @@ export async function joinPool(
   if (!pool || pool.id !== parsed.data.pool_id) {
     return { error: "Pool not found" };
   }
-  if (pool.status === "locked" || pool.status === "completed") {
-    return { error: "This pool is no longer accepting entries" };
+  if (pool.status !== "open") {
+    if (pool.status === "draft") return { error: "This pool isn't open yet." };
+    return { error: "This pool is no longer accepting entries." };
   }
 
   const { error } = await supabase.from("entries").insert({
