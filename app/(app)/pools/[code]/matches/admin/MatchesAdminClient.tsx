@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { saveMatchResult } from './actions'
 import { seedMatches } from '../../seed-matches/actions'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 type Match = {
   id: string
@@ -107,19 +108,23 @@ export function MatchesAdminClient({ pool, initialMatches, teams }: Props) {
       </div>
 
       {initialMatches.length === 0 ? (
-        <div className="mt-8 rounded-lg border border-border bg-surface px-6 py-12 text-center">
-          <p className="text-text-muted">No fixtures seeded yet.</p>
-          <p className="mt-1 text-sm text-text-subtle">
-            Seed all 104 World Cup 2026 fixtures with placeholder kickoff times.
-          </p>
-          <button
-            onClick={handleSeed}
-            disabled={isSeeding}
-            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-bright disabled:cursor-not-allowed disabled:opacity-50"
+        <div className="mt-8">
+          <EmptyState
+            title="No matches scheduled"
+            description="Seed all 104 World Cup 2026 fixtures with placeholder kickoff times."
+            actions={[
+              {
+                label: isSeeding ? 'Seeding…' : 'Seed 104 fixtures',
+                onClick: handleSeed,
+                disabled: isSeeding,
+                variant: 'primary',
+              },
+            ]}
           >
-            {isSeeding ? 'Seeding…' : 'Seed 104 fixtures'}
-          </button>
-          {seedError && <p className="mt-3 text-sm text-[#C44545]">{seedError}</p>}
+            {seedError && (
+              <p className="mt-3 text-sm text-[#C44545]">{seedError}</p>
+            )}
+          </EmptyState>
         </div>
       ) : (
         <>

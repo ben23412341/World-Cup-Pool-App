@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function LeaderboardPage({
   params,
@@ -46,21 +47,17 @@ export default async function LeaderboardPage({
 
       <div className="mt-8">
         {standings.length === 0 ? (
-          <div className="rounded-lg border border-border bg-surface px-6 py-12 text-center">
-            <p className="text-text-muted">
-              The leaderboard will appear here once the tournament starts.
-            </p>
-            <p className="mt-3 text-sm text-text-subtle">
-              Until then, you can review entries on the{" "}
-              <Link
-                href={`/pools/${pool.join_code}`}
-                className="text-primary hover:text-primary-bright"
-              >
-                dashboard
-              </Link>
-              .
-            </p>
-          </div>
+          <EmptyState
+            title={poolUnlocked ? "Waiting for the first match results" : "No standings yet"}
+            description={
+              poolUnlocked
+                ? "Standings update automatically after each match is scored."
+                : "The leaderboard will appear here once the tournament starts."
+            }
+            actions={[
+              { label: "Back to dashboard", href: `/pools/${pool.join_code}`, variant: "ghost" },
+            ]}
+          />
         ) : (
           <div className="space-y-2">
             {standings.map((row) => {

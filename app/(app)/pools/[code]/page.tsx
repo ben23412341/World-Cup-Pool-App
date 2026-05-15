@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { maybeAutoLock } from "@/lib/pools/auto-lock";
 import { CopyButton } from "@/components/pool/CopyButton";
 import { PoolStatusControls } from "./PoolStatusControls";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_BADGE: Record<string, string> = {
   draft: "bg-surface-elevated text-text-muted",
@@ -187,55 +188,71 @@ export default async function PoolDashboardPage({
       <section className="mt-8">
         <h2 className="font-display text-xl text-text">Entries</h2>
         {allEntries.length === 0 ? (
-          <p className="mt-4 text-sm text-text-muted">
-            No entries yet. Share the join code to get started.
-          </p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {allEntries.map((entry) => {
-              const isSubmitted = !!entry.submitted_at;
-              const canLink = isOwner || poolUnlocked;
-              const dateLabel = entry.submitted_at
-                ? `Submitted ${new Date(entry.submitted_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-                : "Joined";
-
-              return (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3"
-                >
-                  <div>
-                    {canLink && isSubmitted ? (
-                      <Link
-                        href={`/pools/${pool.join_code}/entries/${entry.id}`}
-                        className="text-sm font-medium text-text hover:text-primary"
-                      >
-                        {entry.display_name}
-                      </Link>
-                    ) : (
-                      <span
-                        className="text-sm font-medium text-text"
-                        title={!canLink && isSubmitted ? "Visible after pool locks" : undefined}
-                      >
-                        {entry.display_name}
-                      </span>
-                    )}
-                    <p className="mt-0.5 text-xs text-text-subtle">{dateLabel}</p>
-                  </div>
-                  <span
-                    className={
-                      "rounded-full px-2.5 py-0.5 text-xs font-medium " +
-                      (isSubmitted
-                        ? "bg-primary/15 text-primary"
-                        : "bg-surface-elevated text-text-muted")
-                    }
-                  >
-                    {isSubmitted ? "submitted" : "joined"}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="mt-4">
+            {isOwner ? (
+              <EmptyState
+                title="No entries yet"
+                description="Share the join code above to get your group in."
+              />
+            ) : (
+              <p className="mt-4 text-sm text-text-muted">
+                Other entries will be visible once the pool locks.
+              </p>
+            )}
           </div>
+        ) : (
+          <>
+            <div className="mt-4 space-y-2">
+              {allEntries.map((entry) => {
+                const isSubmitted = !!entry.submitted_at;
+                const canLink = isOwner || poolUnlocked;
+                const dateLabel = entry.submitted_at
+                  ? `Submitted ${new Date(entry.submitted_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                  : "Joined";
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3"
+                  >
+                    <div>
+                      {canLink && isSubmitted ? (
+                        <Link
+                          href={`/pools/${pool.join_code}/entries/${entry.id}`}
+                          className="text-sm font-medium text-text hover:text-primary"
+                        >
+                          {entry.display_name}
+                        </Link>
+                      ) : (
+                        <span
+                          className="text-sm font-medium text-text"
+                          title={!canLink && isSubmitted ? "Visible after pool locks" : undefined}
+                        >
+                          {entry.display_name}
+                        </span>
+                      )}
+                      <p className="mt-0.5 text-xs text-text-subtle">{dateLabel}</p>
+                    </div>
+                    <span
+                      className={
+                        "rounded-full px-2.5 py-0.5 text-xs font-medium " +
+                        (isSubmitted
+                          ? "bg-primary/15 text-primary"
+                          : "bg-surface-elevated text-text-muted")
+                      }
+                    >
+                      {isSubmitted ? "submitted" : "joined"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {!isOwner && !poolUnlocked && (
+              <p className="mt-3 text-center text-sm text-text-subtle">
+                Other entries will be visible once the pool locks.
+              </p>
+            )}
+          </>
         )}
       </section>
 

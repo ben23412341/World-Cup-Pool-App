@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const metadata = { title: "My entries — World Cup Pool" };
 
@@ -30,22 +31,15 @@ export default async function MyEntriesPage() {
       <h1 className="font-display text-3xl text-text">My entries</h1>
 
       {entries.length === 0 ? (
-        <div className="mt-8 rounded-lg border border-border bg-surface px-6 py-12 text-center">
-          <p className="text-text-muted">You haven&apos;t joined any pools yet.</p>
-          <div className="mt-5 flex items-center justify-center gap-3">
-            <Link
-              href="/join"
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-bright"
-            >
-              Join a pool
-            </Link>
-            <Link
-              href="/pools/create"
-              className="rounded-md border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-            >
-              Create a pool
-            </Link>
-          </div>
+        <div className="mt-8">
+          <EmptyState
+            title="No pools yet"
+            description="Join an existing pool with a code, or create your own."
+            actions={[
+              { label: "Join a pool", href: "/join", variant: "primary" },
+              { label: "Create a pool", href: "/pools/create", variant: "ghost" },
+            ]}
+          />
         </div>
       ) : (
         <div className="mt-6 space-y-3">
