@@ -41,10 +41,6 @@ export default async function JoinPoolPage({
     }
   }
 
-  if (existingEntry) {
-    redirect(`/pools/${pool.join_code}/entries/${existingEntry.id}`);
-  }
-
   if (pool.status === "locked" || pool.status === "completed") {
     return (
       <div className="mx-auto max-w-lg pt-16 text-center">

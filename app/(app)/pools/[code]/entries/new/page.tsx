@@ -70,7 +70,7 @@ export default async function NewEntryPage({
 
   const poolTeams: PoolTeam[] = (rawTeams ?? [])
     .map((row) => {
-      const t = row.teams as { id: string; name: string; code: string; cost: number };
+      const t = row.teams as unknown as { id: string; name: string; code: string; cost: number };
       return { id: t.id, name: t.name, code: t.code, cost: row.cost_override ?? t.cost };
     })
     .sort((a, b) => b.cost - a.cost || a.name.localeCompare(b.name));
