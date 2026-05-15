@@ -12,7 +12,11 @@
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Get-ChildItem -Path \"D:\\\\worldcup-pool\" -Directory)",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(xargs grep -l \"match\\\\|Match\")"
+      "Bash(xargs grep -l \"match\\\\|Match\")",
+      "Bash(node -e \"const {z} = require\\('zod'\\); const e = z.string\\(\\).safeParse\\(1\\).error; console.log\\(Object.keys\\(e\\)\\); console.log\\(JSON.stringify\\(require\\('./node_modules/zod/package.json'\\).version\\)\\)\")",
+      "Bash(node -e \"const {z} = require\\('zod'\\); const e = z.string\\(\\).min\\(1\\).safeParse\\(''\\); console.log\\(JSON.stringify\\(e\\)\\); console.log\\('issues:', e.error?.issues\\); console.log\\('errors:', e.error?.errors\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(start *)"
     ]
   }
 }
