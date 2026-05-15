@@ -36,11 +36,13 @@ export function LeaderboardRow({
   const showTiebreakers = isTied && (tiebreakerGoals !== null || tiebreakerMinute !== null);
   const hasActuals = actualTotalGoals !== null || actualFinalMinute !== null;
 
-  return (
+  const rowInner = (
     <div
       className={
-        "relative flex items-center gap-4 overflow-hidden rounded-lg border px-4 py-3 " +
-        (isFirst ? "border-accent/30 bg-accent/5" : "border-border bg-surface")
+        "relative flex items-center gap-4 overflow-hidden rounded-lg border px-4 py-3 transition-colors " +
+        (isFirst
+          ? "border-accent/30 bg-accent/5 hover:bg-surface-elevated"
+          : "border-border bg-surface hover:bg-surface-elevated")
       }
     >
       {isMe && (
@@ -67,16 +69,7 @@ export function LeaderboardRow({
       {/* Name + optional tiebreaker line */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          {poolUnlocked ? (
-            <Link
-              href={`/pools/${poolCode}/entries/${entryId}`}
-              className="truncate text-sm font-medium text-text hover:text-primary"
-            >
-              {displayName}
-            </Link>
-          ) : (
-            <span className="truncate text-sm font-medium text-text">{displayName}</span>
-          )}
+          <span className="truncate text-sm font-medium text-text">{displayName}</span>
           {isMe && (
             <span className="flex-shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary">
               YOU
@@ -124,6 +117,15 @@ export function LeaderboardRow({
       </div>
     </div>
   );
+
+  if (poolUnlocked) {
+    return (
+      <Link href={`/pools/${poolCode}/entries/${entryId}`} className="block cursor-pointer">
+        {rowInner}
+      </Link>
+    );
+  }
+  return rowInner;
 }
 
 function TrophyIcon() {

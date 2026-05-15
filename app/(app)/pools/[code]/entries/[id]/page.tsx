@@ -43,11 +43,10 @@ export default async function EntryDetailPage({
   if (entry.pool_id !== pool.id) notFound();
 
   const isEntryOwner = user?.id === entry.user_id;
-  const isPoolOwner = user?.id === pool.owner_id;
   // Visibility unlocks when the pool status is locked/completed, not merely when
   // locks_at has passed — auto-lock will have updated the status by render time.
   const poolLocked = pool.status === "locked" || pool.status === "completed";
-  const canView = isEntryOwner || isPoolOwner || poolLocked;
+  const canView = isEntryOwner || poolLocked;
 
   if (!canView) {
     return (
@@ -64,6 +63,13 @@ export default async function EntryDetailPage({
       </div>
     );
   }
+
+  const { data: standingsRow } = await supabase
+    .from("standings_cache")
+    .select("rank, points")
+    .eq("pool_id", pool.id)
+    .eq("entry_id", id)
+    .maybeSingle();
 
   const { data: entryTeamRows } = await supabase
     .from("entry_teams")
@@ -125,6 +131,11 @@ export default async function EntryDetailPage({
     <div className="mx-auto max-w-3xl">
       <div>
         <h1 className="font-display text-3xl text-text">{entry.display_name}</h1>
+        {standingsRow && (
+          <p className="mt-0.5 text-sm text-text-muted">
+            Rank #{standingsRow.rank} · {standingsRow.points} points
+          </p>
+        )}
         <p className="mt-1 text-sm text-text-muted">
           {submittedLabel}
           {" · "}
