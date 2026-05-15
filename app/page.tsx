@@ -46,7 +46,7 @@ export default async function LandingPage() {
           </p>
           <div className="mt-10 flex flex-col items-center gap-3">
             <Link
-              href="/signup"
+              href={user ? "/join" : "/login"}
               className="w-full max-w-xs rounded-md bg-primary px-6 py-3 text-center text-base font-medium text-text transition-colors hover:bg-primary-bright"
             >
               Join a pool
