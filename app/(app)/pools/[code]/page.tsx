@@ -283,6 +283,12 @@ export default async function PoolDashboardPage({
             Manage tiebreakers →
           </Link>
           <Link
+            href={`/pools/${pool.join_code}/bonus/admin`}
+            className="text-sm text-text-muted transition-colors hover:text-text"
+          >
+            Manage bonus pool →
+          </Link>
+          <Link
             href={`/pools/${pool.join_code}/settings`}
             className="text-sm text-text-muted transition-colors hover:text-text"
           >

@@ -19,7 +19,7 @@ export default async function LeaderboardPage({
   const { data: pool } = await supabase
     .from("pools")
     .select(
-      "id, name, join_code, owner_id, status, actual_total_goals, actual_final_first_goal_minute"
+      "id, name, join_code, owner_id, status, actual_total_goals, actual_final_first_goal_minute, bonus_finalized"
     )
     .eq("join_code", code.toUpperCase())
     .single();
@@ -53,18 +53,31 @@ export default async function LeaderboardPage({
     );
   }
 
-  const [{ data: entriesData }, { data: cacheData }] = await Promise.all([
-    supabase
-      .from("entries")
-      .select("id, display_name, user_id, tiebreaker_total_goals, tiebreaker_final_minute")
-      .eq("pool_id", pool.id)
-      .not("submitted_at", "is", null)
-      .order("display_name"),
-    supabase
-      .from("standings_cache")
-      .select("entry_id, points, rank")
-      .eq("pool_id", pool.id),
-  ]);
+  const [{ data: entriesData }, { data: cacheData }, { data: bonusCorrectData }] =
+    await Promise.all([
+      supabase
+        .from("entries")
+        .select("id, display_name, user_id, tiebreaker_total_goals, tiebreaker_final_minute")
+        .eq("pool_id", pool.id)
+        .not("submitted_at", "is", null)
+        .order("display_name"),
+      supabase.from("standings_cache").select("entry_id, points, rank").eq("pool_id", pool.id),
+      supabase
+        .from("bonus_correct_answers")
+        .select("answer_number")
+        .eq("pool_id", pool.id)
+        .eq("question_index", 11)
+        .maybeSingle(),
+    ]);
+
+  const entryIds = (entriesData ?? []).map((e) => e.id as string);
+  const { data: bonusAnswersData } =
+    entryIds.length > 0
+      ? await supabase
+          .from("entry_bonus_answers")
+          .select("entry_id, question_index, answer_text, answer_number, is_correct")
+          .in("entry_id", entryIds)
+      : { data: [] };
 
   const cacheMap = new Map(
     (cacheData ?? []).map((r) => [r.entry_id as string, r])
@@ -101,6 +114,72 @@ export default async function LeaderboardPage({
 
   const visibleRows = allRows.slice(0, 10);
   const hasMore = allRows.length > 10;
+
+  // --- Bonus pool ---
+  const bonusAnswers = bonusAnswersData ?? [];
+  const q11Actual = (bonusCorrectData?.answer_number as number | null) ?? null;
+  const bonusFinalized = pool.bonus_finalized as boolean;
+
+  type BonusParticipant = {
+    entryId: string;
+    displayName: string;
+    correctCount: number;
+    q11Answer: number | null;
+  };
+
+  const answersByEntry = new Map<string, typeof bonusAnswers>();
+  for (const a of bonusAnswers) {
+    if (!answersByEntry.has(a.entry_id as string))
+      answersByEntry.set(a.entry_id as string, []);
+    answersByEntry.get(a.entry_id as string)!.push(a);
+  }
+
+  const bonusParticipants: BonusParticipant[] = [];
+  for (const entry of entriesData ?? []) {
+    const answers = answersByEntry.get(entry.id as string) ?? [];
+    const hasAnyAnswer = answers.some(
+      (a) => (a.answer_text as string | null) !== null || (a.answer_number as number | null) !== null
+    );
+    if (!hasAnyAnswer) continue;
+
+    const correctCount = answers.filter((a) => (a.is_correct as boolean | null) === true).length;
+    const q11Row = answers.find((a) => (a.question_index as number) === 11);
+    bonusParticipants.push({
+      entryId: entry.id as string,
+      displayName: entry.display_name as string,
+      correctCount,
+      q11Answer: (q11Row?.answer_number as number | null) ?? null,
+    });
+  }
+
+  bonusParticipants.sort((a, b) => {
+    if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount;
+    if (q11Actual !== null) {
+      const aDiff = a.q11Answer !== null ? Math.abs(a.q11Answer - q11Actual) : Infinity;
+      const bDiff = b.q11Answer !== null ? Math.abs(b.q11Answer - q11Actual) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
+    return a.displayName.localeCompare(b.displayName);
+  });
+
+  const anyMarkingDone = bonusAnswers.some((a) => (a.is_correct as boolean | null) !== null);
+
+  let bonusWinners: BonusParticipant[] = [];
+  if (bonusFinalized && bonusParticipants.length > 0) {
+    const top = bonusParticipants[0];
+    bonusWinners = bonusParticipants.filter((p) => {
+      if (p.correctCount !== top.correctCount) return false;
+      if (q11Actual !== null && top.q11Answer !== null) {
+        const topDiff = Math.abs(top.q11Answer - q11Actual);
+        const pDiff = p.q11Answer !== null ? Math.abs(p.q11Answer - q11Actual) : Infinity;
+        return pDiff === topDiff;
+      }
+      return true;
+    });
+  }
+
+  const visibleBonusRows = bonusParticipants.slice(0, 10);
+  const hasBonusMore = bonusParticipants.length > 10;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -152,6 +231,62 @@ export default async function LeaderboardPage({
           </>
         )}
       </div>
+
+      {/* Bonus pool section — only shown when anyone participated */}
+      {bonusParticipants.length > 0 && (
+        <div className="mt-10">
+          <h2 className="font-display text-xl text-text">Bonus pool</h2>
+
+          {!anyMarkingDone ? (
+            <p className="mt-4 text-sm text-text-muted">
+              Bonus pool results will appear once the owner finalizes answers.
+            </p>
+          ) : (
+            <>
+              {bonusFinalized && bonusWinners.length > 0 && (
+                <div className="mt-4 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+                  <p className="text-sm font-semibold text-accent">
+                    {bonusWinners.length === 1
+                      ? `Winner: ${bonusWinners[0].displayName}`
+                      : `Winners: ${bonusWinners.map((w) => w.displayName).join(", ")} (tied)`}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
+                <div className="divide-y divide-border">
+                  {visibleBonusRows.map((row, i) => (
+                    <Link
+                      key={row.entryId}
+                      href={`/pools/${pool.join_code}/entries/${row.entryId}/bonus`}
+                      className="flex items-center gap-4 px-4 py-2.5 transition-colors hover:bg-surface-elevated"
+                    >
+                      <span className="w-6 flex-shrink-0 text-right font-mono text-sm tabular-nums text-text-muted">
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 text-sm text-text">{row.displayName}</span>
+                      <span className="font-mono text-sm tabular-nums text-text-muted">
+                        {row.correctCount} / 11
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {hasBonusMore && (
+                <div className="mt-4 text-center">
+                  <Link
+                    href={`/pools/${pool.join_code}/leaderboard/bonus`}
+                    className="text-sm text-text-muted hover:text-text"
+                  >
+                    View all bonus entries →
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
