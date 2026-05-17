@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signupSchema } from "@/lib/schemas/auth";
 import SignupForm from "./SignupForm";
@@ -35,7 +36,7 @@ export default function SignupPage() {
     if (error) {
       return { error: error.message };
     }
-    return { success: true as const };
+    redirect("/my-entries");
   }
 
   return (
