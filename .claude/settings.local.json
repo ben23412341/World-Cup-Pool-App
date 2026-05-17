@@ -29,7 +29,8 @@
       "Bash(npx supabase *)",
       "PowerShell(git add *)",
       "PowerShell(git status *)",
-      "PowerShell(git diff *)"
+      "PowerShell(git diff *)",
+      "Bash(git stash *)"
     ]
   }
 }

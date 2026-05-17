@@ -27,7 +27,7 @@ export default async function MatchesAdminPage({
   const { data: matches } = await supabase
     .from('matches')
     .select(
-      'id, match_number, stage, kickoff_at, home_team_id, away_team_id, home_score, away_score, went_to_extra_time, went_to_penalties, penalty_winner_team_id, status',
+      'id, match_number, stage, kickoff_at, home_team_id, away_team_id, home_score, away_score, went_to_extra_time, went_to_penalties, penalty_winner_team_id, home_penalty_score, away_penalty_score, status',
     )
     .eq('pool_id', pool.id)
     .order('match_number', { ascending: true })
