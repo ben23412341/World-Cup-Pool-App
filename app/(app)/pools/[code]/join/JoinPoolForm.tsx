@@ -84,6 +84,41 @@ export default function JoinPoolForm({
         </div>
       </div>
 
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-medium text-text">Your Name</p>
+          <p className="mt-0.5 text-xs text-text-subtle">This will not be displayed.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label htmlFor="first_name" className="block text-xs font-medium text-text-muted">
+              First name
+            </label>
+            <input
+              id="first_name"
+              name="first_name"
+              type="text"
+              required
+              autoComplete="given-name"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="last_name" className="block text-xs font-medium text-text-muted">
+              Last name
+            </label>
+            <input
+              id="last_name"
+              name="last_name"
+              type="text"
+              required
+              autoComplete="family-name"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={pending}

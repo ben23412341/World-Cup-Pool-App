@@ -95,7 +95,7 @@ export default async function LandingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-20 md:py-24">
+        <section className="pb-20 pt-16 md:pb-24 md:pt-20">
           <div className="mx-auto flex max-w-5xl flex-col items-center gap-10 px-4">
             {/* Trophy */}
             <div className="flex shrink-0 items-center justify-center">
@@ -275,11 +275,6 @@ export default async function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto max-w-5xl px-4 py-6 text-center text-sm text-text-subtle">
-          Built for the 2026 World Cup
-        </div>
-      </footer>
     </div>
   );
 }

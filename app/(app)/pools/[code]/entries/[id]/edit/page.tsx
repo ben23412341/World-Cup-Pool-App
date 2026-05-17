@@ -264,14 +264,6 @@ function StepRules({ base }: { base: string }) {
         </p>
       </div>
 
-      <div className="flex justify-end">
-        <Link
-          href={`${base}?step=2`}
-          className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-bright"
-        >
-          Continue to team picks
-        </Link>
-      </div>
     </div>
   );
 }

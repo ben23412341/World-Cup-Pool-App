@@ -268,7 +268,8 @@ export function TeamPickerStep({
       </div>
 
       {/* Continue button (validated) */}
-      <div className="flex justify-end pt-2">
+      <div className="flex items-center justify-between pt-2">
+        <p className="text-xs text-text-subtle">You can edit this until the pool locks.</p>
         <button
           type="button"
           onClick={handleContinue}

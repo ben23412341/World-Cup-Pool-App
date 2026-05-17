@@ -43,10 +43,11 @@ export default async function EntryDetailPage({
   if (entry.pool_id !== pool.id) notFound();
 
   const isEntryOwner = user?.id === entry.user_id;
+  const isPoolOwner = user?.id === pool.owner_id;
   // Visibility unlocks when the pool status is locked/completed, not merely when
   // locks_at has passed — auto-lock will have updated the status by render time.
   const poolLocked = pool.status === "locked" || pool.status === "completed";
-  const canView = isEntryOwner || poolLocked;
+  const canView = isEntryOwner || isPoolOwner || poolLocked;
 
   if (!canView) {
     return (
@@ -62,6 +63,24 @@ export default async function EntryDetailPage({
         </div>
       </div>
     );
+  }
+
+  // Separate query so a missing column (pre-migration) doesn't 404 the page.
+  const { data: referralRow } = await supabase
+    .from("entries")
+    .select("referred_by_first_name, referred_by_last_name")
+    .eq("id", id)
+    .maybeSingle();
+
+  let referredBy: string | null = null;
+  if (referralRow?.referred_by_first_name) {
+    referredBy = `${referralRow.referred_by_first_name} ${referralRow.referred_by_last_name ?? ""}`.trim();
+  } else if (isEntryOwner) {
+    // Fallback: read from auth metadata if DB columns not yet populated.
+    const meta = user?.user_metadata as Record<string, string> | undefined;
+    if (meta?.referred_by_first_name) {
+      referredBy = `${meta.referred_by_first_name} ${meta.referred_by_last_name ?? ""}`.trim();
+    }
   }
 
   const { data: standingsRow } = await supabase
@@ -146,6 +165,11 @@ export default async function EntryDetailPage({
             {pool.name}
           </Link>
         </p>
+        {referredBy && (
+          <p className="mt-0.5 text-sm text-text-muted">
+            Referred by {referredBy}
+          </p>
+        )}
       </div>
 
       {locked === "1" && (
@@ -250,14 +274,24 @@ export default async function EntryDetailPage({
         >
           ← Back to {pool.name}
         </Link>
-        {isEntryOwner && !poolLocked && (
-          <Link
-            href={`/pools/${pool.join_code}/entries/${entry.id}/edit`}
-            className="rounded-md border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-          >
-            Edit entry
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {isEntryOwner && !poolLocked && (
+            <Link
+              href={`/pools/${pool.join_code}/entries/${entry.id}/edit`}
+              className="rounded-md border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
+            >
+              Edit entry
+            </Link>
+          )}
+          {isPoolOwner && !isEntryOwner && (
+            <Link
+              href={`/pools/${pool.join_code}/entries/${entry.id}/remove`}
+              className="rounded-md border border-red-800/60 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-900/20 hover:text-red-300"
+            >
+              Remove entry
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

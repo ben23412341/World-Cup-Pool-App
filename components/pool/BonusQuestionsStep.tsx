@@ -195,7 +195,9 @@ export function BonusQuestionsStep({
         </div>
       ))}
 
-      <div className="flex flex-col items-end gap-2 pt-4">
+      <div className="flex items-center justify-between pt-4">
+        <p className="text-xs text-text-subtle">You can edit this until the pool locks.</p>
+        <div className="flex flex-col items-end gap-2">
         <button
           type="button"
           onClick={handleSubmit}
@@ -216,6 +218,7 @@ export function BonusQuestionsStep({
             Ready to submit your entry.
           </span>
         )}
+        </div>
       </div>
     </div>
   );

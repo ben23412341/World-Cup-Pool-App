@@ -53,7 +53,7 @@ export default async function MyEntriesPage() {
 
             const isSubmitted = !!entry.submitted_at;
             const href = isSubmitted
-              ? `/pools/${pool.join_code}/entries/${entry.id}`
+              ? `/pools/${pool.join_code}`
               : `/pools/${pool.join_code}/entries/new`;
 
             const submittedDate = entry.submitted_at

@@ -18,6 +18,14 @@ const schema = z.object({
     .string()
     .min(1, "Referrer's last name is required")
     .max(50, "Last name must be 50 characters or fewer"),
+  first_name: z
+    .string()
+    .min(1, "Your first name is required")
+    .max(50, "First name must be 50 characters or fewer"),
+  last_name: z
+    .string()
+    .min(1, "Your last name is required")
+    .max(50, "Last name must be 50 characters or fewer"),
 });
 
 export type JoinPoolState = { error: string } | null;
@@ -32,6 +40,8 @@ export async function joinPool(
     display_name: ((formData.get("display_name") as string) ?? "").trim(),
     referred_by_first_name: ((formData.get("referred_by_first_name") as string) ?? "").trim(),
     referred_by_last_name: ((formData.get("referred_by_last_name") as string) ?? "").trim(),
+    first_name: ((formData.get("first_name") as string) ?? "").trim(),
+    last_name: ((formData.get("last_name") as string) ?? "").trim(),
   };
 
   const parsed = schema.safeParse(raw);
@@ -74,12 +84,10 @@ export async function joinPool(
     return { error: error.message };
   }
 
-  // Store referral in auth user metadata — no schema change required.
-  // Visible in Supabase dashboard → Authentication → Users → select user.
   await supabase.auth.updateUser({
     data: {
-      referred_by_first_name: parsed.data.referred_by_first_name,
-      referred_by_last_name: parsed.data.referred_by_last_name,
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
     },
   });
 
