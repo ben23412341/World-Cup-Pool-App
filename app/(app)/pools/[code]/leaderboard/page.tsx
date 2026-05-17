@@ -28,31 +28,6 @@ export default async function LeaderboardPage({
 
   const poolLocked = pool.status === "locked" || pool.status === "completed";
 
-  if (!poolLocked) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <div>
-          <Link
-            href={`/pools/${pool.join_code}`}
-            className="text-sm text-text-muted hover:text-text"
-          >
-            ← {pool.name}
-          </Link>
-          <h1 className="font-display mt-1 text-3xl text-text">Leaderboard</h1>
-        </div>
-        <div className="mt-8">
-          <EmptyState
-            title="No standings yet"
-            description="The leaderboard will appear here once the tournament starts."
-            actions={[
-              { label: "Back to dashboard", href: `/pools/${pool.join_code}`, variant: "ghost" },
-            ]}
-          />
-        </div>
-      </div>
-    );
-  }
-
   const [{ data: entriesData }, { data: cacheData }, { data: bonusCorrectData }] =
     await Promise.all([
       supabase
@@ -196,8 +171,8 @@ export default async function LeaderboardPage({
       <div className="mt-8">
         {allRows.length === 0 ? (
           <EmptyState
-            title="Waiting for the first match results"
-            description="Standings update automatically after each match is scored."
+            title="No entries yet"
+            description={poolLocked ? "Standings update automatically after each match is scored." : "Entries will appear here once players submit their picks."}
             actions={[
               { label: "Back to dashboard", href: `/pools/${pool.join_code}`, variant: "ghost" },
             ]}
@@ -210,7 +185,6 @@ export default async function LeaderboardPage({
                   key={row.entryId}
                   {...row}
                   poolCode={pool.join_code}
-                  poolUnlocked={poolLocked}
                   isTied={isTied(row.points)}
                   actualTotalGoals={actualTotalGoals}
                   actualFinalMinute={actualFinalMinute}

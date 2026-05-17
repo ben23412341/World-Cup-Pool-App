@@ -49,6 +49,41 @@ export default function JoinPoolForm({
         />
       </div>
 
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-medium text-text">Which player referred you?</p>
+          <p className="mt-0.5 text-xs text-text-subtle">Required — enter the name of the player who invited you.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label htmlFor="referred_by_first_name" className="block text-xs font-medium text-text-muted">
+              First name
+            </label>
+            <input
+              id="referred_by_first_name"
+              name="referred_by_first_name"
+              type="text"
+              required
+              autoComplete="off"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="referred_by_last_name" className="block text-xs font-medium text-text-muted">
+              Last name
+            </label>
+            <input
+              id="referred_by_last_name"
+              name="referred_by_last_name"
+              type="text"
+              required
+              autoComplete="off"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-text placeholder:text-text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={pending}

@@ -206,18 +206,12 @@ export default async function PoolDashboardPage({
         </div>
 
         <div className="mt-4">
-          {poolUnlocked ? (
-            <Link
-              href={`/pools/${pool.join_code}/leaderboard`}
-              className="text-sm text-primary hover:text-primary-bright"
-            >
-              View leaderboard →
-            </Link>
-          ) : (
-            <p className="text-sm text-text-subtle">
-              Leaderboard will be available once the pool locks.
-            </p>
-          )}
+          <Link
+            href={`/pools/${pool.join_code}/leaderboard`}
+            className="text-sm text-primary hover:text-primary-bright"
+          >
+            View leaderboard →
+          </Link>
         </div>
       </section>
 
@@ -235,36 +229,69 @@ export default async function PoolDashboardPage({
           )}
         </div>
 
-        {topStandings.length === 0 ? (
-          <p className="mt-4 text-sm text-text-muted">
-            The leaderboard will appear here once the tournament starts.
-          </p>
-        ) : (
-          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface divide-y divide-border">
-            {topStandings.map((row) => {
-              const entry = row.entries as unknown as { display_name: string } | null;
-              const isFirst = row.rank === 1;
-              return (
-                <div key={row.entry_id} className="flex items-center gap-4 px-4 py-2.5">
-                  <span
-                    className={
-                      "w-6 flex-shrink-0 text-right font-mono text-sm tabular-nums " +
-                      (isFirst ? "text-accent" : "text-text-muted")
-                    }
+        {(() => {
+          const submittedEntries = allEntries
+            .filter((e) => e.submitted_at)
+            .sort((a, b) => (a.display_name as string).localeCompare(b.display_name as string))
+            .slice(0, 5);
+
+          if (topStandings.length > 0) {
+            return (
+              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface divide-y divide-border">
+                {topStandings.map((row) => {
+                  const entry = row.entries as unknown as { display_name: string } | null;
+                  const isFirst = row.rank === 1;
+                  return (
+                    <Link
+                      key={row.entry_id}
+                      href={`/pools/${pool.join_code}/entries/${row.entry_id}`}
+                      className="flex items-center gap-4 px-4 py-2.5 transition-colors hover:bg-surface-elevated"
+                    >
+                      <span
+                        className={
+                          "w-6 flex-shrink-0 text-right font-mono text-sm tabular-nums " +
+                          (isFirst ? "text-accent" : "text-text-muted")
+                        }
+                      >
+                        {row.rank}
+                      </span>
+                      <span className="flex-1 text-sm text-text">
+                        {entry?.display_name ?? "—"}
+                      </span>
+                      <span className="font-mono text-sm tabular-nums text-text-muted">
+                        {row.points} pts
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          if (submittedEntries.length > 0) {
+            return (
+              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface divide-y divide-border">
+                {submittedEntries.map((e) => (
+                  <Link
+                    key={e.id as string}
+                    href={`/pools/${pool.join_code}/entries/${e.id}`}
+                    className="flex items-center gap-4 px-4 py-2.5 transition-colors hover:bg-surface-elevated"
                   >
-                    {row.rank}
-                  </span>
-                  <span className="flex-1 text-sm text-text">
-                    {entry?.display_name ?? "—"}
-                  </span>
-                  <span className="font-mono text-sm tabular-nums text-text-muted">
-                    {row.points} pts
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <span className="w-6 flex-shrink-0 text-right font-mono text-sm tabular-nums text-text-subtle">—</span>
+                    <span className="flex-1 text-sm text-text">{e.display_name as string}</span>
+                    <span className="font-mono text-sm tabular-nums text-text-muted">0 pts</span>
+                  </Link>
+                ))}
+              </div>
+            );
+          }
+
+          return (
+            <p className="mt-4 text-sm text-text-muted">
+              No entries yet.
+            </p>
+          );
+        })()}
       </section>
 
       {/* Owner links */}

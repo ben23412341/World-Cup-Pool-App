@@ -9,7 +9,8 @@ type SavePayload = {
   away_score: number
   went_to_extra_time: boolean
   went_to_penalties: boolean
-  penalty_winner_team_id: string | null
+  home_penalty_score: number | null
+  away_penalty_score: number | null
 }
 
 export async function saveMatchResult(
@@ -62,16 +63,17 @@ export async function saveMatchResult(
     return { error: 'Group stage matches cannot go to penalties' }
   }
 
+  let penaltyWinnerId: string | null = null
   if (payload.went_to_penalties) {
-    if (!payload.penalty_winner_team_id) {
-      return { error: 'Penalty winner is required' }
+    const h = payload.home_penalty_score
+    const a = payload.away_penalty_score
+    if (h === null || a === null || !Number.isInteger(h) || !Number.isInteger(a) || h < 0 || a < 0) {
+      return { error: 'Penalty shootout scores are required' }
     }
-    if (
-      payload.penalty_winner_team_id !== payload.home_team_id &&
-      payload.penalty_winner_team_id !== payload.away_team_id
-    ) {
-      return { error: 'Penalty winner must be one of the two teams' }
+    if (h === a) {
+      return { error: 'Penalty scores cannot be equal — there must be a winner' }
     }
+    penaltyWinnerId = h > a ? payload.home_team_id : payload.away_team_id
   }
 
   const { error: updateError } = await supabase
@@ -83,7 +85,9 @@ export async function saveMatchResult(
       away_score: payload.away_score,
       went_to_extra_time: payload.went_to_extra_time,
       went_to_penalties: payload.went_to_penalties,
-      penalty_winner_team_id: payload.went_to_penalties ? payload.penalty_winner_team_id : null,
+      home_penalty_score: payload.went_to_penalties ? payload.home_penalty_score : null,
+      away_penalty_score: payload.went_to_penalties ? payload.away_penalty_score : null,
+      penalty_winner_team_id: penaltyWinnerId,
       status: 'finished',
     })
     .eq('id', matchId)

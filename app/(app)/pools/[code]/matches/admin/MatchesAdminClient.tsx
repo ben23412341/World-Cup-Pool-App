@@ -18,6 +18,8 @@ type Match = {
   away_score: number | null
   went_to_extra_time: boolean
   went_to_penalties: boolean
+  home_penalty_score: number | null
+  away_penalty_score: number | null
   penalty_winner_team_id: string | null
   status: string
 }
@@ -196,7 +198,8 @@ function MatchRow({
   const [awayScore, setAwayScore] = useState(match.away_score?.toString() ?? '')
   const [wentToExtraTime, setWentToExtraTime] = useState(match.went_to_extra_time)
   const [wentToPenalties, setWentToPenalties] = useState(match.went_to_penalties)
-  const [penaltyWinnerId, setPenaltyWinnerId] = useState(match.penalty_winner_team_id ?? '')
+  const [homePenaltyScore, setHomePenaltyScore] = useState(match.home_penalty_score?.toString() ?? '')
+  const [awayPenaltyScore, setAwayPenaltyScore] = useState(match.away_penalty_score?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
 
   // Sync local state when server data changes (after router.refresh())
@@ -207,7 +210,8 @@ function MatchRow({
     setAwayScore(match.away_score?.toString() ?? '')
     setWentToExtraTime(match.went_to_extra_time)
     setWentToPenalties(match.went_to_penalties)
-    setPenaltyWinnerId(match.penalty_winner_team_id ?? '')
+    setHomePenaltyScore(match.home_penalty_score?.toString() ?? '')
+    setAwayPenaltyScore(match.away_penalty_score?.toString() ?? '')
   }, [
     match.home_team_id,
     match.away_team_id,
@@ -215,7 +219,8 @@ function MatchRow({
     match.away_score,
     match.went_to_extra_time,
     match.went_to_penalties,
-    match.penalty_winner_team_id,
+    match.home_penalty_score,
+    match.away_penalty_score,
     match.status,
   ])
 
@@ -226,7 +231,8 @@ function MatchRow({
     awayScore !== (match.away_score?.toString() ?? '') ||
     wentToExtraTime !== match.went_to_extra_time ||
     wentToPenalties !== match.went_to_penalties ||
-    penaltyWinnerId !== (match.penalty_winner_team_id ?? '')
+    homePenaltyScore !== (match.home_penalty_score?.toString() ?? '') ||
+    awayPenaltyScore !== (match.away_penalty_score?.toString() ?? '')
 
   const homeScoreNum = parseInt(homeScore, 10)
   const awayScoreNum = parseInt(awayScore, 10)
@@ -238,17 +244,31 @@ function MatchRow({
     homeScoreNum >= 0 &&
     awayScoreNum >= 0
 
+  const homePenaltyNum = parseInt(homePenaltyScore, 10)
+  const awayPenaltyNum = parseInt(awayPenaltyScore, 10)
+  const penaltyScoresValid =
+    homePenaltyScore !== '' &&
+    awayPenaltyScore !== '' &&
+    !isNaN(homePenaltyNum) &&
+    !isNaN(awayPenaltyNum) &&
+    homePenaltyNum >= 0 &&
+    awayPenaltyNum >= 0 &&
+    homePenaltyNum !== awayPenaltyNum
+
+  const derivedPenaltyWinner =
+    penaltyScoresValid
+      ? teams.find((t) => t.id === (homePenaltyNum > awayPenaltyNum ? homeTeamId : awayTeamId))
+      : null
+
   const canSave =
     isDirty &&
     homeTeamId &&
     awayTeamId &&
     homeTeamId !== awayTeamId &&
     scoresValid &&
-    (!wentToPenalties || !!penaltyWinnerId)
+    (!wentToPenalties || penaltyScoresValid)
 
   const showPenalties = match.stage !== 'group' && scoresValid
-
-  const penaltyOptions = teams.filter((t) => t.id === homeTeamId || t.id === awayTeamId)
 
   const kickoffLabel = match.kickoff_at
     ? new Date(match.kickoff_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -264,7 +284,8 @@ function MatchRow({
         away_score: awayScoreNum,
         went_to_extra_time: wentToExtraTime,
         went_to_penalties: wentToPenalties,
-        penalty_winner_team_id: wentToPenalties ? penaltyWinnerId || null : null,
+        home_penalty_score: wentToPenalties ? homePenaltyNum : null,
+        away_penalty_score: wentToPenalties ? awayPenaltyNum : null,
       })
       if (result.error) {
         setError(result.error)
@@ -385,7 +406,10 @@ function MatchRow({
               checked={wentToPenalties}
               onChange={(e) => {
                 setWentToPenalties(e.target.checked)
-                if (!e.target.checked) setPenaltyWinnerId('')
+                if (!e.target.checked) {
+                  setHomePenaltyScore('')
+                  setAwayPenaltyScore('')
+                }
               }}
               className="accent-primary"
             />
@@ -393,19 +417,29 @@ function MatchRow({
           </label>
 
           {wentToPenalties && (
-            <select
-              value={penaltyWinnerId}
-              onChange={(e) => setPenaltyWinnerId(e.target.value)}
-              className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ colorScheme: 'dark' }}
-            >
-              <option value="">— Penalty winner —</option>
-              {penaltyOptions.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-text-subtle">Pen:</span>
+              <input
+                type="number"
+                min="0"
+                value={homePenaltyScore}
+                onChange={(e) => setHomePenaltyScore(e.target.value)}
+                placeholder="0"
+                className="w-10 rounded border border-border bg-surface px-1.5 py-0.5 text-center text-xs text-text tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <span className="text-xs text-text-subtle">–</span>
+              <input
+                type="number"
+                min="0"
+                value={awayPenaltyScore}
+                onChange={(e) => setAwayPenaltyScore(e.target.value)}
+                placeholder="0"
+                className="w-10 rounded border border-border bg-surface px-1.5 py-0.5 text-center text-xs text-text tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {derivedPenaltyWinner && (
+                <span className="text-xs text-primary">{derivedPenaltyWinner.name} wins</span>
+              )}
+            </div>
           )}
         </div>
       )}

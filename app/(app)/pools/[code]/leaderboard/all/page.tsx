@@ -93,7 +93,6 @@ export default async function LeaderboardAllPage({
             key={row.entryId}
             {...row}
             poolCode={pool.join_code}
-            poolUnlocked={poolLocked}
             isTied={isTied(row.points)}
             actualTotalGoals={actualTotalGoals}
             actualFinalMinute={actualFinalMinute}

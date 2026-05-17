@@ -12,7 +12,6 @@ export type LeaderboardRowData = {
 
 type Props = LeaderboardRowData & {
   poolCode: string;
-  poolUnlocked: boolean;
   isTied: boolean;
   actualTotalGoals: number | null;
   actualFinalMinute: number | null;
@@ -25,7 +24,6 @@ export function LeaderboardRow({
   points,
   rank,
   poolCode,
-  poolUnlocked,
   isTied,
   tiebreakerGoals,
   tiebreakerMinute,
@@ -118,14 +116,11 @@ export function LeaderboardRow({
     </div>
   );
 
-  if (poolUnlocked) {
-    return (
-      <Link href={`/pools/${poolCode}/entries/${entryId}`} className="block cursor-pointer">
-        {rowInner}
-      </Link>
-    );
-  }
-  return rowInner;
+  return (
+    <Link href={`/pools/${poolCode}/entries/${entryId}`} className="block cursor-pointer">
+      {rowInner}
+    </Link>
+  );
 }
 
 function TrophyIcon() {
