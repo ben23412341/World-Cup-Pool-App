@@ -64,8 +64,7 @@ export default function CreatePoolPage() {
             Entry deadline <span className="text-loss">*</span>
           </label>
           <p className="text-xs text-text-subtle">
-            Entries become read-only at this time. Set to the first match kickoff
-            — June 11, 2026 at 5:00 PM ET.
+            Entries become read-only at this time. You can set this before the first match if needed.
           </p>
           <input
             id="locks_at"

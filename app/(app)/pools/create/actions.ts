@@ -10,12 +10,11 @@ const BONUS_QUESTIONS = [
   { id: 3, text: "Which team will finish in 3rd place?", type: "team" },
   { id: 4, text: "Who will win the Golden Boot (top scorer)?", type: "text" },
   { id: 5, text: "Who will win the Golden Ball (best player)?", type: "text" },
-  { id: 6, text: "Which team will top their group with the most points?", type: "team" },
-  { id: 7, text: "Which team will be the biggest surprise of the tournament?", type: "team" },
+  { id: 6, text: "Which team will score the most goals in the group stage (there could be more than one correct answer)?", type: "team" },
+  { id: 7, text: "How many goals will Canada score throughout the tournament?", type: "number" },
   { id: 8, text: "Which team will score the most goals in total?", type: "team" },
-  { id: 9, text: "How many total goals will be scored across all 104 matches?", type: "number" },
+  { id: 9, text: "How many goals will be scored against USA throughout the tournament?", type: "number" },
   { id: 10, text: "How many matches will be decided by a penalty shootout?", type: "number" },
-  { id: 11, text: "How many goals will be scored against USA throughout the tournament?", type: "number" },
 ];
 
 export type CreatePoolState = { error: string } | null;

@@ -198,7 +198,7 @@ export function BonusAdminClient({ poolCode, bonusFinalized, questions, allTeams
                 {/* Correct answer reference field */}
                 <div className="mb-5">
                   <p className="mb-1.5 text-xs text-text-subtle">
-                    Your reference answer (informational — Q11 is used as tiebreaker)
+                    Enter the correct answer to mark each entry
                   </p>
                   <div className="flex items-center gap-3">
                     {q.type === 'team' ? (

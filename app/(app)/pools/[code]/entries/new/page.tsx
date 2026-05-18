@@ -211,8 +211,7 @@ function StepRules() {
             total spend cannot exceed 30 Pesodollars.
           </p>
           <p>
-            One entry per person per pool. Entries lock when the tournament
-            kicks off, no changes are allowed after that point.
+            One entry per person per pool. Entries lock at a set time, no changes are allowed after that point.
           </p>
           <p>
             To settle ties, you&apos;ll also guess the total number of goals

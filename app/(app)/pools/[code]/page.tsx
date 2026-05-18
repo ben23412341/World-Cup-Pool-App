@@ -109,6 +109,19 @@ export default async function PoolDashboardPage({
           {pool.description && (
             <p className="mt-1 text-sm text-text-muted">{pool.description}</p>
           )}
+          {pool.locks_at && (pool.status === "open" || pool.status === "draft") && (
+            <p className="mt-1 text-sm text-text-subtle">
+              Locks{" "}
+              {new Date(pool.locks_at).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                timeZone: "America/New_York",
+                timeZoneName: "short",
+              })}
+            </p>
+          )}
         </div>
         <Link
           href={`/pools/${pool.join_code}/leaderboard`}

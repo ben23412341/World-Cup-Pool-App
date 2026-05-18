@@ -69,10 +69,23 @@ export async function joinPool(
     return { error: "This pool is no longer accepting entries." };
   }
 
+  const { data: nameConflict } = await supabase
+    .from("entries")
+    .select("id")
+    .eq("pool_id", parsed.data.pool_id)
+    .ilike("display_name", parsed.data.display_name)
+    .maybeSingle();
+
+  if (nameConflict) {
+    return { error: "That display name is already taken in this pool. Please choose a different one." };
+  }
+
   const { error } = await supabase.from("entries").insert({
     pool_id: parsed.data.pool_id,
     user_id: user.id,
     display_name: parsed.data.display_name,
+    referred_by_first_name: parsed.data.referred_by_first_name,
+    referred_by_last_name: parsed.data.referred_by_last_name,
     paid: true,
     submitted_at: null,
   });

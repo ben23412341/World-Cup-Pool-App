@@ -39,7 +39,9 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(pkill -f \"next-server\")",
       "PowerShell(Get-Process *)",
-      "PowerShell(app *)"
+      "PowerShell(app *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

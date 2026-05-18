@@ -186,7 +186,7 @@ export default async function LandingPage() {
               </div>
               <h3 className="mb-3 text-lg font-medium text-text">Build your squad</h3>
               <p className="text-sm leading-relaxed text-text-muted">
-                You get <strong className="text-text">30 Pesodollars</strong> to pick at least 7 World Cup nations. Teams cost 1–7 Pesodollars based on their prospects — favourites cost more, underdogs come cheap. Stack up on a powerhouse or spread across a diverse squad.
+                You get <strong className="text-text">30 Pesodollars</strong> to pick at least 7 World Cup nations. Teams cost 1–7 Pesodollars based on their prospects (favourites cost more, underdogs cost less). Stack up on a powerhouse or spread across a diverse squad.
               </p>
             </div>
 
@@ -249,7 +249,7 @@ export default async function LandingPage() {
               </div>
               <h3 className="mb-3 text-lg font-medium text-text">Bonus pool <span className="text-sm font-normal text-text-subtle">(optional)</span></h3>
               <p className="text-sm leading-relaxed text-text-muted">
-                Answer <strong className="text-text">11 bonus questions</strong> for a separate side pool. Most correct answers wins — tied by closest answer to question 11. Completely independent from the main leaderboard.
+                Answer <strong className="text-text">10 bonus questions</strong> for a separate side pool. Most correct answers wins, ties broken by the closest answers to the two tiebreaker questions. Completely independent from the main leaderboard.
               </p>
             </div>
           </div>
