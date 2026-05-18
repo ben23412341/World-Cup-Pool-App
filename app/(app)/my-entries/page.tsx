@@ -34,10 +34,9 @@ export default async function MyEntriesPage() {
         <div className="mt-8">
           <EmptyState
             title="No pools yet"
-            description="Join an existing pool with a code, or create your own."
+            description="Join an existing pool with a code."
             actions={[
               { label: "Join a pool", href: "/join", variant: "primary" },
-              { label: "Create a pool", href: "/pools/create", variant: "ghost" },
             ]}
           />
         </div>
