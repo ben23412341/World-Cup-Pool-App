@@ -1,6 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function removeEntry(
   entryId: string
@@ -27,9 +28,16 @@ export async function removeEntry(
   if (pool.owner_id !== user.id) return { error: "Only the pool owner can remove entries." };
   if (entry.user_id === user.id) return { error: "You cannot remove your own entry this way." };
 
-  const { error } = await supabase.from("entries").delete().eq("id", entryId);
+  // Use admin client so the delete bypasses RLS regardless of which policies are applied
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { error: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.from("entries").delete().eq("id", entryId);
 
   if (error) return { error: "Failed to remove entry: " + error.message };
+
+  revalidatePath(`/pools/${pool.join_code}`);
 
   return { redirectTo: `/pools/${pool.join_code}` };
 }

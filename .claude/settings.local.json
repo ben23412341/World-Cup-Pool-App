@@ -30,7 +30,16 @@
       "PowerShell(git add *)",
       "PowerShell(git status *)",
       "PowerShell(git diff *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(Get-Content \"C:\\\\Users\\\\Mike_\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--worldcup-pool\\\\11ed03fc-c19f-4272-a2a7-4207b6404b2e\\\\tasks\\\\be14rgu26.output\")",
+      "WebSearch",
+      "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Id, ProcessName, CPU)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "PowerShell(Get-Process *)",
+      "PowerShell(app *)"
     ]
   }
 }

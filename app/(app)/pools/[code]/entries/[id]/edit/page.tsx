@@ -260,7 +260,7 @@ function StepRules({ base }: { base: string }) {
           Budget is still{" "}
           <strong className="text-text">30 Pesodollars</strong>, minimum{" "}
           <strong className="text-text">7 teams</strong>. The pool locks when
-          the tournament begins — no edits after that point.
+          the tournament begins, no edits after that point.
         </p>
       </div>
 

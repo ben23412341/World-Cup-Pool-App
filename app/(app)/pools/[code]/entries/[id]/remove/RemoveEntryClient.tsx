@@ -37,6 +37,7 @@ export function RemoveEntryClient({
         setError(result.error);
       } else {
         router.push(result.redirectTo);
+        router.refresh();
       }
     });
   }

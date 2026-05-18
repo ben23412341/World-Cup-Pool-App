@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { NavMenu } from "@/components/layout/NavMenu";
 
 export default async function AppLayout({
   children,
@@ -25,7 +26,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border bg-surface">
+      <header className="relative z-10 border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <svg
@@ -39,34 +40,7 @@ export default async function AppLayout({
             </svg>
             <span className="font-display text-lg text-text">World Cup Pool</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/my-entries"
-              className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-            >
-              My entries
-            </Link>
-            <Link
-              href="/join"
-              className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-            >
-              Join pool
-            </Link>
-            <Link
-              href="/pools/create"
-              className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-            >
-              Create pool
-            </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-md px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-elevated hover:text-text"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
+          <NavMenu signOut={signOut} />
         </div>
       </header>
 

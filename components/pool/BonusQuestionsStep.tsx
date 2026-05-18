@@ -139,8 +139,8 @@ export function BonusQuestionsStep({
         <h2 className="font-display text-xl text-text">Bonus side pool</h2>
         <p className="text-sm leading-relaxed text-text-muted">
           These 11 questions are an optional side pool, separate from the main
-          pool. Whoever answers the most correctly wins the side pot. You can
-          skip this entirely and still submit your entry — leave any or all
+          pool. Whoever answers the most correctly wins the side pool. You can
+          skip this entirely and still submit your entry. Leave any or all
           questions blank if you don&apos;t want to participate.
         </p>
       </div>
@@ -174,13 +174,13 @@ export function BonusQuestionsStep({
               type="number"
               step="1"
               min="0"
-              max="30"
+              {...(q.id !== 9 && q.id !== 11 && { max: q.id === 10 ? "32" : "30" })}
               value={(answers[q.id] as number | "") ?? ""}
               onChange={(e) =>
                 setAnswer(q.id, e.target.value === "" ? "" : Number(e.target.value))
               }
               className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary sm:w-40"
-              placeholder="0–30"
+              placeholder={q.id === 9 ? "e.g. 147" : q.id === 10 ? "0–32" : q.id === 11 ? "e.g. 12" : "0–30"}
             />
           ) : (
             <input

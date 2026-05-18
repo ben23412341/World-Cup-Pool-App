@@ -2,51 +2,51 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 const TEAMS = [
+  { name: "Algeria", code: "dz" },
   { name: "Argentina", code: "ar" },
   { name: "Australia", code: "au" },
   { name: "Austria", code: "at" },
   { name: "Belgium", code: "be" },
+  { name: "Bosnia & Herzegovina", code: "ba" },
   { name: "Brazil", code: "br" },
-  { name: "Cameroon", code: "cm" },
   { name: "Canada", code: "ca" },
-  { name: "Chile", code: "cl" },
+  { name: "Cape Verde", code: "cv" },
   { name: "Colombia", code: "co" },
-  { name: "Costa Rica", code: "cr" },
   { name: "Croatia", code: "hr" },
-  { name: "Denmark", code: "dk" },
+  { name: "Curaçao", code: "cw" },
+  { name: "Czechia", code: "cz" },
+  { name: "DR Congo", code: "cd" },
   { name: "Ecuador", code: "ec" },
   { name: "Egypt", code: "eg" },
   { name: "England", code: "gb-eng" },
   { name: "France", code: "fr" },
   { name: "Germany", code: "de" },
   { name: "Ghana", code: "gh" },
-  { name: "Honduras", code: "hn" },
-  { name: "Hungary", code: "hu" },
+  { name: "Haiti", code: "ht" },
   { name: "Iran", code: "ir" },
   { name: "Iraq", code: "iq" },
   { name: "Ivory Coast", code: "ci" },
   { name: "Japan", code: "jp" },
   { name: "Jordan", code: "jo" },
-  { name: "Mali", code: "ml" },
   { name: "Mexico", code: "mx" },
   { name: "Morocco", code: "ma" },
   { name: "Netherlands", code: "nl" },
   { name: "New Zealand", code: "nz" },
-  { name: "Nigeria", code: "ng" },
+  { name: "Norway", code: "no" },
   { name: "Panama", code: "pa" },
   { name: "Paraguay", code: "py" },
-  { name: "Poland", code: "pl" },
   { name: "Portugal", code: "pt" },
+  { name: "Qatar", code: "qa" },
   { name: "Saudi Arabia", code: "sa" },
+  { name: "Scotland", code: "gb-sct" },
   { name: "Senegal", code: "sn" },
-  { name: "Serbia", code: "rs" },
-  { name: "Slovakia", code: "sk" },
   { name: "South Africa", code: "za" },
   { name: "South Korea", code: "kr" },
   { name: "Spain", code: "es" },
+  { name: "Sweden", code: "se" },
   { name: "Switzerland", code: "ch" },
+  { name: "Tunisia", code: "tn" },
   { name: "Turkey", code: "tr" },
-  { name: "Ukraine", code: "ua" },
   { name: "Uruguay", code: "uy" },
   { name: "USA", code: "us" },
   { name: "Uzbekistan", code: "uz" },
@@ -144,8 +144,9 @@ export default async function LandingPage() {
         <div className="overflow-hidden border-y border-border py-3">
           <div
             style={{
-              whiteSpace: "nowrap",
-              animation: "ticker-scroll 50s linear infinite",
+              display: "flex",
+              width: "max-content",
+              animation: "ticker-scroll 120s linear infinite",
               willChange: "transform",
             }}
           >
@@ -248,7 +249,7 @@ export default async function LandingPage() {
               </div>
               <h3 className="mb-3 text-lg font-medium text-text">Bonus pool <span className="text-sm font-normal text-text-subtle">(optional)</span></h3>
               <p className="text-sm leading-relaxed text-text-muted">
-                Answer <strong className="text-text">11 bonus questions</strong> for a separate side pot. Most correct answers wins — tied by closest answer to question 11. Completely independent from the main leaderboard.
+                Answer <strong className="text-text">11 bonus questions</strong> for a separate side pool. Most correct answers wins — tied by closest answer to question 11. Completely independent from the main leaderboard.
               </p>
             </div>
           </div>

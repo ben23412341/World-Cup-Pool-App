@@ -212,7 +212,7 @@ function StepRules() {
           </p>
           <p>
             One entry per person per pool. Entries lock when the tournament
-            kicks off — no changes are allowed after that point.
+            kicks off, no changes are allowed after that point.
           </p>
           <p>
             To settle ties, you&apos;ll also guess the total number of goals
@@ -231,8 +231,8 @@ function StepRules() {
           </p>
           <p>
             A <strong className="text-text">win earns 3 points</strong>. A{" "}
-            <strong className="text-text">draw earns 1 point</strong>. A loss
-            earns nothing. A win that comes in extra time, before a penalty
+            <strong className="text-text">draw earns 1 point</strong>.{" "}
+            A <strong className="text-text">loss earns nothing.</strong> A win that comes in extra time, before a penalty
             shootout, still counts as a win — 3 points.
           </p>
           <p>
