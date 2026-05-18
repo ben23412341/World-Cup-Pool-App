@@ -69,10 +69,6 @@ export default async function LeaderboardPage({
   const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
 
   allRows.sort((a, b) => {
-    if (a.rank !== null && b.rank !== null && a.rank !== b.rank) return a.rank - b.rank;
-    if (a.rank !== null && b.rank === null) return -1;
-    if (a.rank === null && b.rank !== null) return 1;
-    // Same rank or both null — fall back to JS tiebreakers so display matches rule
     if (b.points !== a.points) return b.points - a.points;
     if (actualTotalGoals !== null) {
       const aDiff = a.tiebreakerGoals !== null ? Math.abs(a.tiebreakerGoals - actualTotalGoals) : Infinity;
@@ -86,6 +82,27 @@ export default async function LeaderboardPage({
     }
     return a.displayName.localeCompare(b.displayName);
   });
+
+  // Compute display ranks from sorted position — ties share the same rank only
+  // when points AND both tiebreaker distances are identical.
+  const displayRanks = new Map<string, number>();
+  for (let i = 0; i < allRows.length; i++) {
+    if (i === 0) { displayRanks.set(allRows[i].entryId, 1); continue; }
+    const prev = allRows[i - 1];
+    const curr = allRows[i];
+    let tiedWithPrev = prev.points === curr.points;
+    if (tiedWithPrev && actualTotalGoals !== null) {
+      const pd = prev.tiebreakerGoals !== null ? Math.abs(prev.tiebreakerGoals - actualTotalGoals) : Infinity;
+      const cd = curr.tiebreakerGoals !== null ? Math.abs(curr.tiebreakerGoals - actualTotalGoals) : Infinity;
+      if (pd !== cd) tiedWithPrev = false;
+    }
+    if (tiedWithPrev && actualFinalMinute !== null) {
+      const pd = prev.tiebreakerMinute !== null ? Math.abs(prev.tiebreakerMinute - actualFinalMinute) : Infinity;
+      const cd = curr.tiebreakerMinute !== null ? Math.abs(curr.tiebreakerMinute - actualFinalMinute) : Infinity;
+      if (pd !== cd) tiedWithPrev = false;
+    }
+    displayRanks.set(curr.entryId, tiedWithPrev ? displayRanks.get(prev.entryId)! : i + 1);
+  }
 
   const pointsCounts = new Map<number, number>();
   allRows.forEach((r) =>
@@ -200,6 +217,7 @@ export default async function LeaderboardPage({
                 <LeaderboardRow
                   key={row.entryId}
                   {...row}
+                  rank={displayRanks.get(row.entryId) ?? null}
                   poolCode={pool.join_code}
                   isTied={isTied(row.points)}
                   actualTotalGoals={actualTotalGoals}

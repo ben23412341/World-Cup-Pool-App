@@ -58,21 +58,48 @@ export default async function LeaderboardAllPage({
     };
   });
 
+  const actualTotalGoals = pool.actual_total_goals as number | null;
+  const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
+
   allRows.sort((a, b) => {
-    if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
-    if (a.rank !== null) return -1;
-    if (b.rank !== null) return 1;
+    if (b.points !== a.points) return b.points - a.points;
+    if (actualTotalGoals !== null) {
+      const aDiff = a.tiebreakerGoals !== null ? Math.abs(a.tiebreakerGoals - actualTotalGoals) : Infinity;
+      const bDiff = b.tiebreakerGoals !== null ? Math.abs(b.tiebreakerGoals - actualTotalGoals) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
+    if (actualFinalMinute !== null) {
+      const aDiff = a.tiebreakerMinute !== null ? Math.abs(a.tiebreakerMinute - actualFinalMinute) : Infinity;
+      const bDiff = b.tiebreakerMinute !== null ? Math.abs(b.tiebreakerMinute - actualFinalMinute) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
     return a.displayName.localeCompare(b.displayName);
   });
+
+  const displayRanks = new Map<string, number>();
+  for (let i = 0; i < allRows.length; i++) {
+    if (i === 0) { displayRanks.set(allRows[i].entryId, 1); continue; }
+    const prev = allRows[i - 1];
+    const curr = allRows[i];
+    let tiedWithPrev = prev.points === curr.points;
+    if (tiedWithPrev && actualTotalGoals !== null) {
+      const pd = prev.tiebreakerGoals !== null ? Math.abs(prev.tiebreakerGoals - actualTotalGoals) : Infinity;
+      const cd = curr.tiebreakerGoals !== null ? Math.abs(curr.tiebreakerGoals - actualTotalGoals) : Infinity;
+      if (pd !== cd) tiedWithPrev = false;
+    }
+    if (tiedWithPrev && actualFinalMinute !== null) {
+      const pd = prev.tiebreakerMinute !== null ? Math.abs(prev.tiebreakerMinute - actualFinalMinute) : Infinity;
+      const cd = curr.tiebreakerMinute !== null ? Math.abs(curr.tiebreakerMinute - actualFinalMinute) : Infinity;
+      if (pd !== cd) tiedWithPrev = false;
+    }
+    displayRanks.set(curr.entryId, tiedWithPrev ? displayRanks.get(prev.entryId)! : i + 1);
+  }
 
   const pointsCounts = new Map<number, number>();
   allRows.forEach((r) =>
     pointsCounts.set(r.points, (pointsCounts.get(r.points) ?? 0) + 1)
   );
   const isTied = (pts: number) => (pointsCounts.get(pts) ?? 0) > 1;
-
-  const actualTotalGoals = pool.actual_total_goals as number | null;
-  const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -92,6 +119,7 @@ export default async function LeaderboardAllPage({
           <LeaderboardRow
             key={row.entryId}
             {...row}
+            rank={displayRanks.get(row.entryId) ?? null}
             poolCode={pool.join_code}
             isTied={isTied(row.points)}
             actualTotalGoals={actualTotalGoals}
