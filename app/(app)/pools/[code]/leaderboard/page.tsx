@@ -65,10 +65,25 @@ export default async function LeaderboardPage({
     };
   });
 
+  const actualTotalGoals = pool.actual_total_goals as number | null;
+  const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
+
   allRows.sort((a, b) => {
-    if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
-    if (a.rank !== null) return -1;
-    if (b.rank !== null) return 1;
+    if (a.rank !== null && b.rank !== null && a.rank !== b.rank) return a.rank - b.rank;
+    if (a.rank !== null && b.rank === null) return -1;
+    if (a.rank === null && b.rank !== null) return 1;
+    // Same rank or both null — fall back to JS tiebreakers so display matches rule
+    if (b.points !== a.points) return b.points - a.points;
+    if (actualTotalGoals !== null) {
+      const aDiff = a.tiebreakerGoals !== null ? Math.abs(a.tiebreakerGoals - actualTotalGoals) : Infinity;
+      const bDiff = b.tiebreakerGoals !== null ? Math.abs(b.tiebreakerGoals - actualTotalGoals) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
+    if (actualFinalMinute !== null) {
+      const aDiff = a.tiebreakerMinute !== null ? Math.abs(a.tiebreakerMinute - actualFinalMinute) : Infinity;
+      const bDiff = b.tiebreakerMinute !== null ? Math.abs(b.tiebreakerMinute - actualFinalMinute) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
     return a.displayName.localeCompare(b.displayName);
   });
 
@@ -77,9 +92,6 @@ export default async function LeaderboardPage({
     pointsCounts.set(r.points, (pointsCounts.get(r.points) ?? 0) + 1)
   );
   const isTied = (pts: number) => (pointsCounts.get(pts) ?? 0) > 1;
-
-  const actualTotalGoals = pool.actual_total_goals as number | null;
-  const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
 
   const visibleRows = allRows.slice(0, 10);
   const hasMore = allRows.length > 10;

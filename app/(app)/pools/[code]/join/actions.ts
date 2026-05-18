@@ -1,6 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const schema = z.object({
@@ -69,7 +69,8 @@ export async function joinPool(
     return { error: "This pool is no longer accepting entries." };
   }
 
-  const { data: nameConflict } = await supabase
+  const adminClient = createAdminClient();
+  const { data: nameConflict } = await adminClient
     .from("entries")
     .select("id")
     .eq("pool_id", parsed.data.pool_id)

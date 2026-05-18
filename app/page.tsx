@@ -255,25 +255,6 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <div className="border-t border-border" />
-
-        {/* Create a pool section */}
-        <section className="mx-auto max-w-3xl px-4 py-16">
-          <h2 className="mb-4 font-display text-3xl text-text">
-            Run your own pool
-          </h2>
-          <p className="mb-8 max-w-prose leading-relaxed text-text-muted">
-            Organising for your own group? Create a pool, set a lock date, share
-            a join code, and track everyone&apos;s picks on a live leaderboard
-            as the tournament unfolds. Takes about two minutes to get started.
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block rounded-md bg-primary px-6 py-3 text-base font-medium text-text transition-colors hover:bg-primary-bright"
-          >
-            Create your own pool
-          </Link>
-        </section>
       </main>
 
     </div>

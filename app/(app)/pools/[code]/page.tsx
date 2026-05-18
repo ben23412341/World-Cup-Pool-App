@@ -187,8 +187,16 @@ export default async function PoolDashboardPage({
 
         <div className="mt-4">
           {myEntry ? (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
-              <div>
+            <div className="flex items-center gap-4 rounded-lg border border-border bg-surface px-4 py-3">
+              <span
+                className={
+                  "w-6 flex-shrink-0 text-right font-mono text-sm tabular-nums " +
+                  (myStanding?.rank === 1 ? "text-accent" : "text-text-muted")
+                }
+              >
+                {myStanding?.rank ?? "—"}
+              </span>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-text">{myEntry.display_name}</p>
                 <p className="mt-0.5 text-xs text-text-subtle">
                   {myEntry.submitted_at
@@ -197,6 +205,11 @@ export default async function PoolDashboardPage({
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                {myStanding && myEntry.submitted_at && (
+                  <span className="font-mono text-sm tabular-nums text-text">
+                    {myStanding.points} pts
+                  </span>
+                )}
                 <span
                   className={
                     "rounded-full px-2.5 py-0.5 text-xs font-medium " +
