@@ -6,7 +6,6 @@ import { useState, useRef, useEffect } from "react";
 const NAV_LINKS = [
   { href: "/my-entries", label: "My entries" },
   { href: "/join", label: "Join pool" },
-  { href: "/pools/create", label: "Create pool" },
 ];
 
 export function NavMenu({ signOut }: { signOut: () => Promise<void> }) {
