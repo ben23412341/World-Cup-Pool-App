@@ -46,64 +46,73 @@ export async function joinPool(
 
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Not authenticated" };
 
-  const { data: pool } = await supabase
-    .from("pools")
-    .select("id, status")
-    .eq("join_code", parsed.data.pool_code)
-    .maybeSingle();
+    // Use admin client for pool lookup — non-members can't read pools via the
+    // regular RLS client, and we need to find the pool before the user has joined.
+    const admin = createAdminClient();
+    const { data: pool } = await admin
+      .from("pools")
+      .select("id, status")
+      .eq("join_code", parsed.data.pool_code.toUpperCase())
+      .maybeSingle();
 
-  if (!pool || pool.id !== parsed.data.pool_id) {
-    return { error: "Pool not found" };
-  }
-  if (pool.status !== "open") {
-    if (pool.status === "draft") return { error: "This pool isn't open yet." };
-    return { error: "This pool is no longer accepting entries." };
-  }
-
-  const adminClient = createAdminClient();
-  const { data: nameConflict } = await adminClient
-    .from("entries")
-    .select("id")
-    .eq("pool_id", parsed.data.pool_id)
-    .ilike("display_name", parsed.data.display_name)
-    .maybeSingle();
-
-  if (nameConflict) {
-    return { error: "That display name is already taken in this pool. Please choose a different one." };
-  }
-
-  const { error } = await supabase.from("entries").insert({
-    pool_id: parsed.data.pool_id,
-    user_id: user.id,
-    display_name: parsed.data.display_name,
-    referred_by_first_name: parsed.data.referred_by_first_name,
-    referred_by_last_name: parsed.data.referred_by_last_name,
-    paid: true,
-    submitted_at: null,
-  });
-
-  if (error) {
-    if (error.code === "23505") {
-      return { error: "You are already a member of this pool" };
+    if (!pool || pool.id !== parsed.data.pool_id) {
+      return { error: "Pool not found" };
     }
-    return { error: error.message };
+    if (pool.status !== "open") {
+      if (pool.status === "draft") return { error: "This pool isn't open yet." };
+      return { error: "This pool is no longer accepting entries." };
+    }
+
+    const { data: nameConflict } = await admin
+      .from("entries")
+      .select("id")
+      .eq("pool_id", parsed.data.pool_id)
+      .ilike("display_name", parsed.data.display_name)
+      .maybeSingle();
+
+    if (nameConflict) {
+      return { error: "That display name is already taken in this pool. Please choose a different one." };
+    }
+
+    const { error } = await supabase.from("entries").insert({
+      pool_id: parsed.data.pool_id,
+      user_id: user.id,
+      display_name: parsed.data.display_name,
+      referred_by_first_name: parsed.data.referred_by_first_name,
+      referred_by_last_name: parsed.data.referred_by_last_name,
+      paid: true,
+      submitted_at: null,
+    });
+
+    if (error) {
+      if (error.code === "23505") {
+        return { error: "You are already a member of this pool" };
+      }
+      return { error: error.message };
+    }
+
+    await supabase.auth.updateUser({
+      data: {
+        first_name: parsed.data.first_name,
+        last_name: parsed.data.last_name,
+      },
+    });
+  } catch (e: unknown) {
+    console.error("joinPool error:", e);
+    return { error: "Something went wrong. Please try again." };
   }
 
-  await supabase.auth.updateUser({
-    data: {
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name,
-    },
-  });
-
+  // redirect() must be called outside try/catch — Next.js throws NEXT_REDIRECT
+  // internally and needs to intercept it before React does.
   redirect(`/pools/${parsed.data.pool_code}/entries/new`);
 }
