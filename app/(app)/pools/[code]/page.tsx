@@ -27,7 +27,7 @@ export default async function PoolDashboardPage({
 
   const { data: rawPool } = await supabase
     .from("pools")
-    .select("id, name, description, join_code, owner_id, status, locks_at, status_changed_at, previous_status")
+    .select("id, name, description, join_code, owner_id, status, locks_at, status_changed_at, previous_status, actual_total_goals, actual_final_first_goal_minute")
     .eq("join_code", code.toUpperCase())
     .single();
 
@@ -57,7 +57,7 @@ export default async function PoolDashboardPage({
   // RLS: owner sees all entries; member sees only their own
   const { data: entriesData } = await supabase
     .from("entries")
-    .select("id, display_name, submitted_at, user_id")
+    .select("id, display_name, submitted_at, user_id, tiebreaker_total_goals, tiebreaker_final_minute")
     .eq("pool_id", pool.id)
     .order("submitted_at", { ascending: true, nullsFirst: true });
 
@@ -65,28 +65,64 @@ export default async function PoolDashboardPage({
   const myEntry = allEntries.find((e) => e.user_id === user?.id) ?? null;
   const submittedCount = allEntries.filter((e) => e.submitted_at).length;
 
-  const [{ data: standingsPreviewData }, { data: myStandingData }] = await Promise.all([
-    supabase
-      .from("standings_cache")
-      .select("entry_id, points, rank, entries(display_name)")
-      .eq("pool_id", pool.id)
-      .order("rank", { ascending: true })
-      .limit(5),
-    myEntry
-      ? supabase
-          .from("standings_cache")
-          .select("entry_id, points, rank")
-          .eq("pool_id", pool.id)
-          .eq("entry_id", myEntry.id as string)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const { data: standingsData } = await supabase
+    .from("standings_cache")
+    .select("entry_id, points")
+    .eq("pool_id", pool.id);
 
-  const topStandings = standingsPreviewData ?? [];
-  const myStanding = myStandingData ?? null;
+  const pointsMap = new Map((standingsData ?? []).map((r) => [r.entry_id as string, r.points as number]));
+  const actualTotalGoals = pool.actual_total_goals as number | null;
+  const actualFinalMinute = pool.actual_final_first_goal_minute as number | null;
 
-  // Build a reliable entry-id → isMe lookup from allEntries (same source the leaderboard uses)
-  const myEntryId = myEntry ? String(myEntry.id) : null;
+  const sortableRows = allEntries
+    .filter((e) => e.submitted_at)
+    .map((e) => ({
+      entryId: e.id as string,
+      displayName: e.display_name as string,
+      isMe: e.user_id === user?.id,
+      points: pointsMap.get(e.id as string) ?? 0,
+      tiebreakerGoals: e.tiebreaker_total_goals as number | null,
+      tiebreakerMinute: e.tiebreaker_final_minute as number | null,
+    }));
+
+  sortableRows.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (actualTotalGoals !== null) {
+      const aDiff = a.tiebreakerGoals !== null ? Math.abs(a.tiebreakerGoals - actualTotalGoals) : Infinity;
+      const bDiff = b.tiebreakerGoals !== null ? Math.abs(b.tiebreakerGoals - actualTotalGoals) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
+    if (actualFinalMinute !== null) {
+      const aDiff = a.tiebreakerMinute !== null ? Math.abs(a.tiebreakerMinute - actualFinalMinute) : Infinity;
+      const bDiff = b.tiebreakerMinute !== null ? Math.abs(b.tiebreakerMinute - actualFinalMinute) : Infinity;
+      if (aDiff !== bDiff) return aDiff - bDiff;
+    }
+    return a.displayName.localeCompare(b.displayName);
+  });
+
+  const rankMap = new Map<string, number>();
+  for (let i = 0; i < sortableRows.length; i++) {
+    if (i === 0) { rankMap.set(sortableRows[i].entryId, 1); continue; }
+    const prev = sortableRows[i - 1];
+    const curr = sortableRows[i];
+    let tiedWithPrev = prev.points === curr.points;
+    if (tiedWithPrev && actualTotalGoals !== null) {
+      const pd = prev.tiebreakerGoals !== null ? Math.abs(prev.tiebreakerGoals - actualTotalGoals) : Infinity;
+      const cd = curr.tiebreakerGoals !== null ? Math.abs(curr.tiebreakerGoals - actualTotalGoals) : Infinity;
+      if (pd !== cd) tiedWithPrev = false;
+    }
+    if (tiedWithPrev && actualFinalMinute !== null) {
+      const pd = prev.tiebreakerMinute !== null ? Math.abs(prev.tiebreakerMinute - actualFinalMinute) : Infinity;
+      const cd = curr.tiebreakerMinute !== null ? Math.abs(curr.tiebreakerMinute - actualFinalMinute) : Infinity;
+      if (pd !== cd) tiedWithPrev = false;
+    }
+    rankMap.set(curr.entryId, tiedWithPrev ? rankMap.get(prev.entryId)! : i + 1);
+  }
+
+  const rankedRows = sortableRows.map((r) => ({ ...r, rank: rankMap.get(r.entryId) ?? null }));
+  const previewRows = rankedRows.slice(0, 5);
+  const myRankedRow = rankedRows.find((r) => r.isMe) ?? null;
+  const myStanding = myRankedRow ? { rank: myRankedRow.rank, points: myRankedRow.points } : null;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -310,12 +346,6 @@ export default async function PoolDashboardPage({
         </div>
 
         {(() => {
-          const submittedEntries = allEntries
-            .filter((e) => e.submitted_at)
-            .sort((a, b) => (a.display_name as string).localeCompare(b.display_name as string))
-            .slice(0, 5);
-
-          // Shared row renderer used in both standings and pre-standings list
           const PreviewRow = ({
             entryId,
             displayName,
@@ -358,28 +388,22 @@ export default async function PoolDashboardPage({
             </Link>
           );
 
-          if (topStandings.length > 0) {
-            const myInTop5 = myEntryId !== null && topStandings.some(
-              (r) => String(r.entry_id) === myEntryId
-            );
-            const showMyRow = !myInTop5 && myStanding !== null && myEntry !== null;
+          if (previewRows.length > 0) {
+            const myInTop5 = myRankedRow !== null && previewRows.some((r) => r.entryId === myRankedRow!.entryId);
+            const showMyRow = !myInTop5 && myRankedRow !== null;
 
             return (
               <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface divide-y divide-border">
-                {topStandings.map((row) => {
-                  const entry = row.entries as unknown as { display_name: string } | null;
-                  const isMe = myEntryId !== null && String(row.entry_id) === myEntryId;
-                  return (
-                    <PreviewRow
-                      key={row.entry_id as string}
-                      entryId={row.entry_id as string}
-                      displayName={entry?.display_name ?? "—"}
-                      rank={row.rank as number}
-                      points={row.points as number}
-                      isMe={isMe}
-                    />
-                  );
-                })}
+                {previewRows.map((row) => (
+                  <PreviewRow
+                    key={row.entryId}
+                    entryId={row.entryId}
+                    displayName={row.displayName}
+                    rank={row.rank}
+                    points={row.points}
+                    isMe={row.isMe}
+                  />
+                ))}
 
                 {showMyRow && (
                   <>
@@ -388,10 +412,10 @@ export default async function PoolDashboardPage({
                       <span className="text-xs text-text-subtle">···</span>
                     </div>
                     <PreviewRow
-                      entryId={String(myEntry!.id)}
-                      displayName={String(myEntry!.display_name)}
-                      rank={myStanding!.rank as number}
-                      points={myStanding!.points as number}
+                      entryId={myRankedRow!.entryId}
+                      displayName={myRankedRow!.displayName}
+                      rank={myRankedRow!.rank}
+                      points={myRankedRow!.points}
                       isMe={true}
                     />
                   </>
@@ -400,17 +424,17 @@ export default async function PoolDashboardPage({
             );
           }
 
-          if (submittedEntries.length > 0) {
+          if (allEntries.some((e) => e.submitted_at)) {
             return (
               <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface divide-y divide-border">
-                {submittedEntries.map((e) => (
+                {allEntries.filter((e) => e.submitted_at).slice(0, 5).map((e) => (
                   <PreviewRow
                     key={e.id as string}
                     entryId={String(e.id)}
                     displayName={String(e.display_name)}
                     rank={null}
                     points={null}
-                    isMe={myEntryId !== null && String(e.id) === myEntryId}
+                    isMe={e.user_id === user?.id}
                   />
                 ))}
               </div>
