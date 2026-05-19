@@ -1,6 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const schema = z.object({
@@ -21,21 +21,24 @@ export async function findPool(
 
   const parsed = schema.safeParse({ code });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("pools")
-    .select("join_code")
-    .eq("join_code", parsed.data.code)
-    .maybeSingle();
+  try {
+    // Use admin client — non-members can't read pools via the RLS client.
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("pools")
+      .select("join_code")
+      .eq("join_code", parsed.data.code)
+      .maybeSingle();
 
-  if (error) {
-    return { error: "Something went wrong looking up that pool" };
-  }
-  if (!data) {
-    return { error: "No pool found with that code" };
+    if (!data) {
+      return { error: "No pool found with that code" };
+    }
+  } catch (e: unknown) {
+    console.error("findPool error:", e);
+    return { error: "Something went wrong looking up that pool. Please try again." };
   }
 
   redirect(`/pools/${parsed.data.code}/join`);
