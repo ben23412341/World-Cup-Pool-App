@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import JoinPoolForm from "./JoinPoolForm";
 
 export default async function JoinPoolPage({
@@ -14,13 +14,19 @@ export default async function JoinPoolPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Use admin client so non-members can look up the pool by join code before joining.
-  const admin = createAdminClient();
-  const { data: pool } = await admin
-    .from("pools")
-    .select("id, name, description, join_code, status, owner_id")
-    .eq("join_code", code.toUpperCase())
-    .maybeSingle();
+  // get_pool_by_join_code is SECURITY DEFINER so it bypasses RLS — non-members
+  // can look up a pool by join code without being a member yet.
+  const { data: rows } = await supabase.rpc("get_pool_by_join_code", {
+    p_code: code.toUpperCase(),
+  });
+  const pool = (rows as Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    join_code: string;
+    status: string;
+    owner_id: string;
+  }> | null)?.[0] ?? null;
 
   if (!pool) notFound();
 
