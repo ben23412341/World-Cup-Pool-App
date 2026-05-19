@@ -1,5 +1,4 @@
 "use server";
-import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -28,7 +27,7 @@ const schema = z.object({
     .max(50, "Last name must be 50 characters or fewer"),
 });
 
-export type JoinPoolState = { error: string } | null;
+export type JoinPoolState = { error: string } | { redirectTo: string } | null;
 
 export async function joinPool(
   _prevState: JoinPoolState,
@@ -107,12 +106,10 @@ export async function joinPool(
         last_name: parsed.data.last_name,
       },
     });
+
+    return { redirectTo: `/pools/${parsed.data.pool_code}/entries/new` };
   } catch (e: unknown) {
     console.error("joinPool error:", e);
     return { error: "Something went wrong. Please try again." };
   }
-
-  // redirect() must be called outside try/catch — Next.js throws NEXT_REDIRECT
-  // internally and needs to intercept it before React does.
-  redirect(`/pools/${parsed.data.pool_code}/entries/new`);
 }

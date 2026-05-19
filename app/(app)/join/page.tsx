@@ -1,14 +1,22 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { findPool } from "./actions";
 import type { FindPoolState } from "./actions";
 
 export default function JoinPage() {
+  const router = useRouter();
   const [state, action, pending] = useActionState<FindPoolState, FormData>(
     findPool,
     null
   );
+
+  useEffect(() => {
+    if (state && "redirectTo" in state) {
+      router.push(state.redirectTo);
+    }
+  }, [state, router]);
 
   return (
     <div className="mx-auto max-w-sm">
@@ -18,7 +26,7 @@ export default function JoinPage() {
       </p>
 
       <form action={action} className="mt-8 space-y-6">
-        {state?.error && (
+        {state && "error" in state && state.error && (
           <div className="rounded-md border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
             {state.error}
           </div>
@@ -45,10 +53,12 @@ export default function JoinPage() {
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || (state !== null && "redirectTo" in state)}
           className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-bright disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Looking up…" : "Find pool"}
+          {pending || (state !== null && "redirectTo" in state)
+            ? "Loading…"
+            : "Find pool"}
         </button>
       </form>
     </div>

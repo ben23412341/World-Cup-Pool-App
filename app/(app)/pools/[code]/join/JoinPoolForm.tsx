@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { joinPool } from "./actions";
 import type { JoinPoolState } from "./actions";
 
@@ -13,17 +14,26 @@ export default function JoinPoolForm({
   poolCode: string;
   defaultDisplayName: string;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState<JoinPoolState, FormData>(
     joinPool,
     null
   );
+
+  useEffect(() => {
+    if (state && "redirectTo" in state) {
+      router.push(state.redirectTo);
+    }
+  }, [state, router]);
+
+  const isRedirecting = state !== null && "redirectTo" in state;
 
   return (
     <form action={action} className="mt-8 space-y-6">
       <input type="hidden" name="pool_id" value={poolId} />
       <input type="hidden" name="pool_code" value={poolCode} />
 
-      {state?.error && (
+      {state && "error" in state && state.error && (
         <div className="rounded-md border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
           {state.error}
         </div>
@@ -121,10 +131,10 @@ export default function JoinPoolForm({
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || isRedirecting}
         className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-bright disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? "Joining…" : "Join this pool"}
+        {pending || isRedirecting ? "Joining…" : "Join this pool"}
       </button>
     </form>
   );

@@ -1,5 +1,4 @@
 "use server";
-import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -10,7 +9,7 @@ const schema = z.object({
     .regex(/^[A-Z0-9]{6}$/, "Join code must contain only letters and numbers"),
 });
 
-export type FindPoolState = { error: string } | null;
+export type FindPoolState = { error: string } | { redirectTo: string } | null;
 
 export async function findPool(
   _prevState: FindPoolState,
@@ -25,7 +24,6 @@ export async function findPool(
   }
 
   try {
-    // Use admin client — non-members can't read pools via the RLS client.
     const admin = createAdminClient();
     const { data } = await admin
       .from("pools")
@@ -36,10 +34,10 @@ export async function findPool(
     if (!data) {
       return { error: "No pool found with that code" };
     }
+
+    return { redirectTo: `/pools/${parsed.data.code}/join` };
   } catch (e: unknown) {
     console.error("findPool error:", e);
     return { error: "Something went wrong looking up that pool. Please try again." };
   }
-
-  redirect(`/pools/${parsed.data.code}/join`);
 }
